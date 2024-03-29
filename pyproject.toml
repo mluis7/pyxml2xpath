@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyxml2xpath"
+version = "0.0.3"
+dependencies = [
+  "lxml"
+]
+requires-python = ">=3.9, <=11"
+authors = [
+  {name = "Luis Muñoz", email = "south.minds@gmail.com"}
+]
+
+description = "Find xpath expressions from XML document."
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["xpath", "xml"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Repository = "https://github.com/mluis7/pyxml2xpath.git"
+
+[project.scripts]
+pyxml2xpath = "xml2xpath.xml2xpath:main"
+
