@@ -6,7 +6,7 @@ Parse XML document and build XPath expression corresponding to its structure.
 Found XPath expressions are tested against the document and the count of found elements is returned. See also `parse()` method below.
 
 ## Build and install
-```
+```bash
 git clone https://github.com/mluis7/pyxml2xpath.git
 cd pyxml2xpath
 python3.9 -m build
@@ -93,4 +93,8 @@ Print xpath expressions and validate by count of elements found with it.
 `all`  : also print attribute xpath expressions  
 
 `pyxml2xpath ~/tmp/soap-ws-oasis.xml 'all'`
+
+or if used as module:
+
+`xml2xpath.print_xpath(xmap, 'all')`
 
