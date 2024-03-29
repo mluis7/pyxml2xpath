@@ -5,7 +5,18 @@ Parse XML document and build XPath expression corresponding to its structure.
 ## Description
 Found XPath expressions are tested against the document and the count of found elements is returned. See also `parse()` method below.
 
+## Build and install
+```
+git clone https://github.com/mluis7/pyxml2xpath.git
+cd pyxml2xpath
+python3.9 -m build
+python3.9 -m pip install dist/pyxml2xpath-0.0.3-py3-none-any.whl --upgrade
+```
+Soon on PyPi!
+
 ## Command line usage
+`pyxml2xpath <file path> [mode]`
+
 `pyxml2xpath ~/tmp/soap-ws-oasis.xml`
 
 ## Module usage
@@ -61,15 +72,25 @@ Found  19 xpath expressions for attributes
 
 ```
 
-### parse(file_path) method
-Parse given xml file, find xpath expressions in it and return
+### `parse(file: str, itree: etree._ElementTree = None)` method
+Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
-    - The ElementTree for further usage
-    - The sanitized namespaces map (no None keys)
-    - A dictionary with original xpath as keys, and parsed xpaths, count of elements found with them and attributes of that elements:
-    
+- The ElementTree for further usage
+- The sanitized namespaces map (no None keys)
+- A dictionary with original xpath as keys, and parsed xpaths, count of elements found with them and attributes of that elements:
+
     xmap = {
         "/some/xpath/*[1]": [ "/some/xpath/ns:ele1", 1, {"id": "unique"} ],
         "/some/other/xpath/*[3]": [ "/some/other/xpath/ns:other", 1, {"name": "myname", "value": "myvalue"} ],
     }
+
+## Print result modes
+Print xpath expressions and validate by count of elements found with it.  
+
+`mode` argument values (optional):
+
+`path` : print elements xpath expressions (default)  
+`all`  : also print attribute xpath expressions  
+
+`pyxml2xpath ~/tmp/soap-ws-oasis.xml 'all'`
 

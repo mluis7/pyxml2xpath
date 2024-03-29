@@ -110,7 +110,10 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict) -> Dict:
     return xmap
 
 def print_xpaths(xmap: Dict, mode: str ="path"):
-    '''Print xpath expressions and validate by count of elements found with it'''
+    '''Print xpath expressions and validate by count of elements found with it.
+    mode: str
+        path : print elements xpath expressions
+        all  : also print attribute xpath expressions'''
     if mode != "none":
         print("\nFound xpath for elements\n")
     
