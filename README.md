@@ -72,6 +72,16 @@ Found  19 xpath expressions for attributes
 
 ```
 
+XPath search could start at a different element than root by passing an xpath expression
+
+```python
+xmap = parse(file,  xpath_base='//*[local-name() = "author"]')[2]
+```
+
+or
+
+`pyxml2xpath ~/tmp/wiki.xml 'path' '//*[local-name() = "author"]'`
+
 ### `parse(file: str, itree: etree._ElementTree = None)` method
 Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
@@ -108,3 +118,6 @@ or if used as module:
 
 `xml2xpath.print_xpath(xmap, 'all')`
 
+
+## HTML support
+HTML has limited support as long as the document is well formed.
