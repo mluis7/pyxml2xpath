@@ -1,6 +1,7 @@
 '''Find all xpath expressions on XML document'''
 
 import sys
+import os.path
 from lxml import etree
 from typing import Dict, Tuple
 
@@ -121,20 +122,23 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
 def print_xpaths(xmap: Dict, mode: str ="path"):
     '''Print xpath expressions and validate by count of elements found with it.
     mode: str
-        path : print elements xpath expressions
-        all  : also print attribute xpath expressions'''
+        path  : print elements xpath expressions
+        all   : also print attribute xpath expressions
+        raw   : print unqualified xpath and found values (list)
+        values: print list of found values only
+    '''
     
     acount=0
     acountmsg=''
     
-    print("\n")
-    
-    for unq_xpath, qxpath_lst in xmap.items():
-            if qxpath_lst[1] > 0 and mode != "none":
-                print(qxpath_lst[0])
-            elif qxpath_lst[1] <= 0:
-                # built xpath didn't find elements
-                print(f"ERROR: {int(qxpath_lst[1])} elements found with {qxpath_lst[0]} xpath expression.\nOriginal xpath: {unq_xpath}", file=sys. stderr)
+    if mode in ["path", "all"]:
+        print("\n")
+        for unq_xpath, qxpath_lst in xmap.items():
+                if qxpath_lst[1] > 0 and mode != "none":
+                    print(qxpath_lst[0])
+                elif qxpath_lst[1] <= 0:
+                    # built xpath didn't find elements
+                    print(f"ERROR: {int(qxpath_lst[1])} elements found with {qxpath_lst[0]} xpath expression.\nOriginal xpath: {unq_xpath}", file=sys. stderr)
     
     if mode == "all":
         print("\n")
@@ -150,6 +154,9 @@ def print_xpaths(xmap: Dict, mode: str ="path"):
     elif mode == "raw":
         for key, value in xmap.items():
             print(key, value)
+    elif mode == "values":
+        for key, value in xmap.items():
+            print(value)
                 
     print(f"\nFound {len(xmap.keys()):3} xpath expressions for elements\n{acountmsg}")
 
@@ -186,11 +193,21 @@ def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*
         "/some/xpath/*[1]": [ "/some/xpath/ns:ele1", 1, {"id": "unique"} ],
         "/some/other/xpath/*[3]": [ "/some/other/xpath/ns:other", 1, {"name": "myname", "value": "myvalue"} ],
     }
+    
+    Parameters
+    ----------
+        file: file path string
+        itree: lxml.etree._ElementTree
+                ElementTree object
+        xpath_base: xpath expression so start searching xpaths for.
     '''
     
     try:
         tree = itree
         if tree is None:
+            if not os.path.isfile(file):
+                sys.exit("ERROR: File not found")
+            
             with open(file, "r") as fin:
                 tree = etree.parse(fin)
         nsmap = build_namespace_dict(tree)

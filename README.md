@@ -80,9 +80,26 @@ xmap = parse(file,  xpath_base='//*[local-name() = "author"]')[2]
 
 or
 
-`pyxml2xpath ~/tmp/wiki.xml 'path' '//*[local-name() = "author"]'`
+```
+pyxml2xpath HL7.xml '' '//*[local-name()= "act"]'
+Running...
+file: HL7.xml
+mode: path
+xpath_base: //*[local-name()= "act"]
 
-### `parse(file: str, itree: etree._ElementTree = None)` method
+
+
+//ns98:entry
+//ns98:entry/ns98:act
+//ns98:entry
+//ns98:entry/ns98:act
+//ns98:entry
+//ns98:entry/ns98:act
+
+Found   6 xpath expressions for elements
+```
+
+### Method `parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*')`
 Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
 - The ElementTree for further usage
@@ -104,13 +121,21 @@ xmap = {
 }
 ```
 
+**Parameters**
+
+- `file: str` file path string.
+- `itree: lxml.etree._ElementTree` ElementTree object.
+- `xpath_base: str` xpath expression To start searching xpaths for.
+        
 ## Print result modes
 Print xpath expressions and validate by count of elements found with it.  
 
 `mode` argument values (optional):
 
-`path` : print elements xpath expressions (default)  
-`all`  : also print attribute xpath expressions  
+- `path`  : print elements xpath expressions (default)  
+- `all`   : also print attribute xpath expressions  
+- `raw`   : print unqualified xpath and found values (list)  
+- `values`: print list of found values only  
 
 `pyxml2xpath ~/tmp/soap-ws-oasis.xml 'all'`
 
