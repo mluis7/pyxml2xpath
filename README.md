@@ -77,12 +77,22 @@ Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
 - The ElementTree for further usage
 - The sanitized namespaces map (no None keys)
-- A dictionary with original xpath as keys, and parsed xpaths, count of elements found with them and attributes of that elements:
+- A dictionary with original xpath as keys and as values a list of parsed xpaths, count of elements found with them and a dictionary with attributes of that elements:
 
-    xmap = {
-        "/some/xpath/*[1]": [ "/some/xpath/ns:ele1", 1, {"id": "unique"} ],
-        "/some/other/xpath/*[3]": [ "/some/other/xpath/ns:other", 1, {"name": "myname", "value": "myvalue"} ],
-    }
+```python
+xmap = {
+    "/some/xpath/*[1]": [ 
+        "/some/xpath/ns:ele1", 
+        1, 
+        {"id": "unique"} 
+     ],
+    "/some/other/xpath/*[3]": [ 
+        "/some/other/xpath/ns:other", 
+        1, 
+        {"name": "myname", "value": "myvalue"} 
+     ],
+}
+```
 
 ## Print result modes
 Print xpath expressions and validate by count of elements found with it.  
