@@ -2,6 +2,8 @@
 # pyxml2xpath
 Parse XML document and build XPath expression corresponding to its structure.
 
+<h3> &#x24D8; Project status: BETA </h3>
+
 ## Description
 Found XPath expressions are tested against the document and the count of found elements is returned. See also `parse()` method below.
 

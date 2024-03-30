@@ -4,6 +4,7 @@ import sys
 import os.path
 from lxml import etree
 from typing import Dict, Tuple
+import errno
 
 def get_qname(qname, revns):
     '''Get qualified name'''
@@ -206,10 +207,10 @@ def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*
         tree = itree
         if tree is None:
             if not os.path.isfile(file):
-                sys.exit("ERROR: File not found")
-            
+                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
             with open(file, "r") as fin:
                 tree = etree.parse(fin)
+        
         nsmap = build_namespace_dict(tree)
         #print(f"Namespaces found: {nsmap}")
         xmap = parse_mixed_ns(tree, nsmap, xpath_base)
@@ -217,7 +218,6 @@ def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*
     except Exception as e:
         print("ERROR.", type(e).__name__, "–", e)
         raise(e)
-        sys.exit(f"Error parsing {file}\n")
 
 def main():
     file = sys.argv[1]
