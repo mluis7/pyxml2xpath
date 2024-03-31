@@ -2,6 +2,7 @@
 
 import sys
 import os.path
+from io import StringIO
 from lxml import etree
 from typing import Dict, Tuple
 import errno
@@ -184,6 +185,10 @@ def build_namespace_dict(tree):
         nsmap[ns] = v
     return nsmap
 
+def fromstring(xmlstr: str, *, xpath_base: str = '//*') -> (etree._ElementTree, Dict[str, str], Tuple[str, int, Dict[str, str]]):
+    doc = etree.parse(StringIO(xmlstr))
+    return parse(file=None, itree=doc, xpath_base=xpath_base)
+    
 def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*') -> (etree._ElementTree, Dict[str, str], Tuple[str, int, Dict[str, str]]):
     '''Parse given xml file, find xpath expressions in it and return
     - The ElementTree for further usage
