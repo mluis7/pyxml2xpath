@@ -4,8 +4,22 @@ Parse XML document and build XPath expression corresponding to its structure.
 
 <h3> &#x24D8; Project status: BETA </h3>
 
+Table of contents
+=================
+
+* [Basic usage](#description)
+* [Build and install](#build-and-install)
+* [Command line usage](#command-line-usage)
+* [Module usage](#module-usage)
+* [Method parse(...)](#method-parse)
+* [Print result modes](#print-result-modes)
+* [HTML support](#html-support)
+* [Testing](#testing)
+
 ## Description
 Found XPath expressions are tested against the document and the count of found elements is returned. See also `parse()` method below.
+
+A spin off of [xml2xpath Bash script](https://github.com/mluis7/xml2xpath). Both projects rely on [libxml2](https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home) implementation.
 
 ## Build and install
 ```bash
@@ -91,7 +105,9 @@ xpath_base: //*[local-name()= "act"]
 Found   6 xpath expressions for elements
 ```
 
-### Method `parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*')`
+### Method parse(...)
+Signature: `parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*')`
+
 Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
 - The ElementTree for further usage
