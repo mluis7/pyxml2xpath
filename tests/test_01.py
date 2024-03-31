@@ -19,9 +19,12 @@ class TestPyXml2Xpath01:
         xpath_base = '//*[local-name()="incident"]'
         print(f"\nTesting '{filepath}' starting at: '{xpath_base}'")
         
-        xmap = xml2xpath.parse(filepath,  xpath_base=xpath_base)[2]
+        nsmap, xmap = xml2xpath.parse(filepath,  xpath_base=xpath_base)[1:]
         print(f"    --> Found {len(xmap.keys())} xpath expressions")
+        print(f"    --> Found {len(nsmap.keys())} namespaces")
+        print(f"    --> nsmap: {nsmap}")
         # do not count parent element
         assert len([k for k in xmap if k != '/soap:Envelope/soap:Body' ]) == 1
         # assert all found expressions exist at least once in the document.
         assert len([v for v in xmap.values() if v[1] == 0]) == 0
+        assert len(nsmap.keys()) == 3
