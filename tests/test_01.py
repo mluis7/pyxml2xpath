@@ -86,7 +86,6 @@ class TestPyXml2Xpath01:
     
         xmap = xml2xpath.fromstring(html_frag)[2]
         print(f"    --> Found {len(xmap.keys())} xpath expressions")
-        # do not count parent element
         assert len(xmap) == 14
     
 
