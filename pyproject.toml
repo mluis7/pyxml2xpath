@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyxml2xpath"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
   "lxml"
 ]
@@ -28,3 +28,7 @@ Repository = "https://github.com/mluis7/pyxml2xpath.git"
 [project.scripts]
 pyxml2xpath = "xml2xpath.xml2xpath:main"
 
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
