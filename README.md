@@ -12,7 +12,7 @@ Found XPath expressions are tested against the document and the count of found e
 git clone https://github.com/mluis7/pyxml2xpath.git
 cd pyxml2xpath
 python3.9 -m build
-python3.9 -m pip install dist/pyxml2xpath-0.0.3-py3-none-any.whl --upgrade
+python3.9 -m pip install dist/pyxml2xpath-0.1.0-py3-none-any.whl --upgrade
 ```
 Soon on PyPi!
 
@@ -183,3 +183,7 @@ Found   2 xpath expressions for elements
 Found   1 xpath expressions for attributes
 ```
 
+## Testing
+To get some result messages run as
+
+`pytest --capture=no --verbose`
