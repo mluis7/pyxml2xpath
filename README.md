@@ -12,7 +12,7 @@ Found XPath expressions are tested against the document and the count of found e
 git clone https://github.com/mluis7/pyxml2xpath.git
 cd pyxml2xpath
 python3.9 -m build
-python3.9 -m pip install dist/pyxml2xpath-0.0.3-py3-none-any.whl --upgrade
+python3.9 -m pip install dist/pyxml2xpath-0.1.0-py3-none-any.whl --upgrade
 ```
 Soon on PyPi!
 
@@ -49,12 +49,6 @@ Found xpath for elements
 /ns98:feed/ns98:id
 /ns98:feed/ns98:title
 /ns98:feed/ns98:link
-/ns98:feed/ns98:link
-/ns98:feed/ns98:updated
-/ns98:feed/ns98:subtitle
-/ns98:feed/ns98:generator
-/ns98:feed/ns98:entry
-/ns98:feed/ns98:entry/ns98:id
 ...
 
 Found xpath for attributes
@@ -63,10 +57,6 @@ Found xpath for attributes
 /ns98:feed/ns98:link/@rel
 /ns98:feed/ns98:link/@type
 /ns98:feed/ns98:link/@href
-/ns98:feed/ns98:link/@rel
-/ns98:feed/ns98:link/@type
-/ns98:feed/ns98:link/@href
-/ns98:feed/ns98:entry/ns98:link/@rel
 ...
 
 Found  32 xpath expressions for elements
@@ -147,4 +137,53 @@ or if used as module:
 
 
 ## HTML support
-HTML has limited support as long as the document is well formed.
+HTML has limited support as long as the document or the HTML fragment are well formed. 
+Make sure the HTML fragment is surrounded by a single element.
+If not, add some fake root element `<root>some_html_fragment</root>`.
+
+See examples on tests:
+
+```
+test_01.TestPyXml2Xpath01.test_parse_html
+test_01.TestPyXml2Xpath01.test_fromstring_html_fragment
+```
+
+```python
+from lxml import html
+from xml2xpath import xml2xpath
+
+filepath = 'resources/html5-small.html.xml'
+hdoc = html.parse(filepath)
+xpath_base = '//*[@id="math"]'
+
+xmap = xml2xpath.parse(None, itree=hdoc, xpath_base=xpath_base)[2]
+```
+
+or on command line
+
+```
+pyxml2xpath resources/html5-small.html.xml 'all' '//*[@id="math"]'
+```
+
+```
+Running...
+file: resources/html5-small.html.xml
+mode: all
+xpath_base: //*[@id="math"]
+
+
+
+//ns98:p
+//ns98:p/ns99:math
+
+
+//ns98:p/ns99:math/@id
+
+Found   2 xpath expressions for elements
+Found   1 xpath expressions for attributes
+```
+
+## Testing
+To get some result messages run as
+
+`pytest --capture=no --verbose`
