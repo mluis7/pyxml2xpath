@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root id="doc1" xmlns:ns="http://simple.example.com/ns1">
+	<ns:ele2 id="2">
+		<ns:child1>
+			<ns:grandchild1>content1</ns:grandchild1>
+		</ns:child1>
+	</ns:ele2>
+    <ns:ele1  id="1">
+        <ns:child1>
+            <ns:grandchild1>content1</ns:grandchild1>
+        </ns:child1>
+    </ns:ele1>
+</root>

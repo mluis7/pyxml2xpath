@@ -6,6 +6,7 @@ from io import StringIO
 from lxml import etree
 from typing import Dict, Tuple
 import errno
+from collections import OrderedDict
 
 def get_qname(qname, revns):
     '''Get qualified name'''
@@ -73,7 +74,7 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
     
     revns = {v:k or 'ns' for k,v in nsmap.items()}
     elst = tree.xpath(xpath_base, namespaces=nsmap)
-    xmap = {}
+    xmap = OrderedDict()
     for ele in elst:
         xp = tree.getpath(ele)
         qname = etree.QName(ele.tag)
@@ -90,7 +91,6 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
             # e.g.:
             #        /root/child
             xmap[xp]= get_dict_list_value(xp)
-            continue
         else:
             # Element may contain qualified and unqualified parts
             # /soapenv:Envelope/soapenv:Body/*/*[2]
