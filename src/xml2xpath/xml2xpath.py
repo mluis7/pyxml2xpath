@@ -6,6 +6,7 @@ from io import StringIO
 from lxml import etree
 from typing import Dict, Tuple
 import errno
+from collections import OrderedDict
 
 def get_qname(qname, revns):
     '''Get qualified name'''
@@ -73,15 +74,17 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
     
     revns = {v:k or 'ns' for k,v in nsmap.items()}
     elst = tree.xpath(xpath_base, namespaces=nsmap)
-    xmap = {}
+    xmap = OrderedDict()
     for ele in elst:
         xp = tree.getpath(ele)
+        # initialize dictionary item to keep XML document order
+        xmap[xp] = None
         qname = etree.QName(ele.tag)
         #print(f"DEBUG: {xp}", file=sys. stderr)
-        if xp in xmap:
-            # Do not update an existing element. Should not enter here, but ...
-            print(f"ERROR: duplicated path: {xp}",file=sys. stderr)
-            continue
+        # if xp in xmap:
+        #     # Do not update an existing element. Should not enter here, but ...
+        #     print(f"ERROR: duplicated path: {xp}",file=sys. stderr)
+        #     continue
         if '*' not in xp:
             # xpath expression is already qualified
             # e.g.:
