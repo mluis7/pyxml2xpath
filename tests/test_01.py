@@ -88,4 +88,14 @@ class TestPyXml2Xpath01:
         print(f"    --> Found {len(xmap.keys())} xpath expressions")
         assert len(xmap) == 14
     
+    
+    def test_compare_order(self):
+        '''Triggered by
+        https://stackoverflow.com/questions/78321064/how-to-compare-xml-layout-with-a-xml-fiscal-note-with-python/78324167#78324167
+        '''
+        xmap = xml2xpath.parse('resources/simple-ns.xml')[2]
+        # same elements but different order
+        xmap2 = xml2xpath.parse('resources/simple-ns-rev-order.xml')[2]
+        
+        assert xmap != xmap2
 

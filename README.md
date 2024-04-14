@@ -26,7 +26,7 @@ A spin off of [xml2xpath Bash script](https://github.com/mluis7/xml2xpath). Both
 git clone https://github.com/mluis7/pyxml2xpath.git
 cd pyxml2xpath
 python3.9 -m build
-python3.9 -m pip install dist/pyxml2xpath-0.1.0-py3-none-any.whl --upgrade
+python3.9 -m pip install dist/pyxml2xpath-0.2.0-py3-none-any.whl --upgrade
 ```
 Soon on PyPi!
 

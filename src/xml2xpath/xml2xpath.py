@@ -77,14 +77,12 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
     xmap = OrderedDict()
     for ele in elst:
         xp = tree.getpath(ele)
-        # initialize dictionary item to keep XML document order
-        xmap[xp] = None
         qname = etree.QName(ele.tag)
         #print(f"DEBUG: {xp}", file=sys. stderr)
-        # if xp in xmap:
-        #     # Do not update an existing element. Should not enter here, but ...
-        #     print(f"ERROR: duplicated path: {xp}",file=sys. stderr)
-        #     continue
+        if xp in xmap:
+            # Do not update an existing element. Should not enter here, but ...
+            print(f"ERROR: duplicated path: {xp}",file=sys. stderr)
+            continue
         if '*' not in xp:
             # xpath expression is already qualified
             # e.g.:
@@ -93,7 +91,6 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
             # e.g.:
             #        /root/child
             xmap[xp]= get_dict_list_value(xp)
-            continue
         else:
             # Element may contain qualified and unqualified parts
             # /soapenv:Envelope/soapenv:Body/*/*[2]
