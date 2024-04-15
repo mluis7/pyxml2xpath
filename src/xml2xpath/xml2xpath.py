@@ -8,6 +8,29 @@ from typing import Dict, Tuple
 import errno
 from collections import OrderedDict
 
+def usage():
+    helpstr='''
+    pyxml2xpath <file path> [mode] [initial xpath expression]
+    
+    mode: str
+        path  : print elements xpath expressions (default)
+        all   : also print attribute xpath expressions
+        raw   : print unqualified xpath and found values (list)
+        values: print list of found values only
+    
+    Initial xpath expression: str
+        Start at some element defined by an xpath expression.
+        //*[local-name()= "act"]
+    
+    Examples:
+        pyxml2xpath tests/resources/soap.xml
+
+        pyxml2xpath tests/resources/HL7.xml '' '//*[local-name()= "act"]'
+        
+        pyxml2xpath tests/resources/HL7.xml 'values' '//*[local-name()= "act"]'
+    '''
+    print(helpstr)
+
 def get_qname(qname, revns):
     '''Get qualified name'''
     lname = qname.localname
@@ -113,18 +136,19 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
                 #print(f"DEBUG: Parsing root: {xp}", file=sys. stderr)
                 build_path_from_parts(xmap, xp, qname, revns)
         
-        # Add attributes to current xmap value
-        xmap[xp][2] = ele.attrib
+        # Add attributes names to current xmap value
+        if ele.attrib is not None:
+            xmap[xp][2] = ele.attrib.keys()
             
     # count elements found with these xpath expressions
     for k, v in xmap.items():
-        xmap[k][1] = tree.xpath(f"count({v[0]})", namespaces=nsmap)
+        xmap[k][1] = int(tree.xpath(f"count({v[0]})", namespaces=nsmap))
     return xmap
 
 def print_xpaths(xmap: Dict, mode: str ="path"):
     '''Print xpath expressions and validate by count of elements found with it.
     mode: str
-        path  : print elements xpath expressions
+        path  : print elements xpath expressions (default)
         all   : also print attribute xpath expressions
         raw   : print unqualified xpath and found values (list)
         values: print list of found values only
@@ -134,7 +158,6 @@ def print_xpaths(xmap: Dict, mode: str ="path"):
     acountmsg=''
     
     if mode in ["path", "all"]:
-        print("\n")
         for unq_xpath, qxpath_lst in xmap.items():
                 if qxpath_lst[1] > 0 and mode != "none":
                     print(qxpath_lst[0])
@@ -143,7 +166,6 @@ def print_xpaths(xmap: Dict, mode: str ="path"):
                     print(f"ERROR: {int(qxpath_lst[1])} elements found with {qxpath_lst[0]} xpath expression.\nOriginal xpath: {unq_xpath}", file=sys. stderr)
     
     if mode == "all":
-        print("\n")
         #Print xpath for attributes
         for unq_xpath, qxpath_lst in xmap.items():
             if qxpath_lst[2] is None:
@@ -193,11 +215,11 @@ def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*
     '''Parse given xml file, find xpath expressions in it and return
     - The ElementTree for further usage
     - The sanitized namespaces map (no None keys)
-    - A dictionary with original xpath as keys, and parsed xpaths, count of elements found with them and attributes of that elements:
+    - A dictionary with original xpath as keys, and parsed xpaths, count of elements found with them and names of attributes of that elements:
     
     xmap = {
-        "/some/xpath/*[1]": [ "/some/xpath/ns:ele1", 1, {"id": "unique"} ],
-        "/some/other/xpath/*[3]": [ "/some/other/xpath/ns:other", 1, {"name": "myname", "value": "myvalue"} ],
+        "/some/xpath/*[1]": [ "/some/xpath/ns:ele1", 1, ["id", "class"] ],
+        "/some/other/xpath/*[3]": [ "/some/other/xpath/ns:other", 1, ["attr1", "attr2"] ],
     }
     
     Parameters
@@ -225,7 +247,15 @@ def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*
         raise(e)
 
 def main():
+    if sys.argv[1] in ["-h", "--help"]:
+        usage()
+        sys.exit()
+
     file = sys.argv[1]
+    
+    if not os.path.isfile(file):
+        print(f"[Errno {errno.ENOENT}] {os.strerror(errno.ENOENT)}")
+        sys.exit(errno.ENOENT)
     
     if len(sys.argv) > 2 and sys.argv[2] != '':
         mode = sys.argv[2]
@@ -237,8 +267,9 @@ def main():
     else:
         xpath_base = "//*"
 
-    print(f"Running...\nfile: {file}\nmode: {mode}\nxpath_base: {xpath_base}\n")
-    xmap = parse(file,  xpath_base=xpath_base)[2]
+    print(f"Running...\n{'file':10}: {file}\n{'mode':10}: {mode}\n{'xpath_base':10}: '{xpath_base}'")
+    nsmap, xmap = parse(file,  xpath_base=xpath_base)[1:]
+    print(f"namespaces: {nsmap}\n")
     print_xpaths(xmap, mode)
 
 if __name__ == "__main__":
