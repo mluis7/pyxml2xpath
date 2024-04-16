@@ -144,7 +144,7 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
             
     # count elements found with these xpath expressions
     for k, v in xmap.items():
-        xmap[k]= v[0], int(tree.xpath(f"count({v[0]})", namespaces=nsmap)), v[2]
+        xmap[k]= v[0], int(tree.xpath(f"count(({v[0]})[1])", namespaces=nsmap)), v[2]
     return xmap
 
 def print_xpaths(xmap: Dict, mode: str ="path"):
