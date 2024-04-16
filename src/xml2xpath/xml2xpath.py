@@ -153,7 +153,7 @@ def print_xpaths(xmap: Dict, mode: str ="path"):
         path  : print elements xpath expressions (default)
         all   : also print attribute xpath expressions
         raw   : print unqualified xpath and found values (list)
-        values: print list of found values only
+        values: print tuple of found values only
     '''
     
     acount=0
