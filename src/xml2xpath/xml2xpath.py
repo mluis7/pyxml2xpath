@@ -1,12 +1,14 @@
 '''Find all xpath expressions on XML document'''
 
-import sys
-import os.path
-from io import StringIO
-from lxml import etree
-from typing import Dict, Tuple
-import errno
 from collections import OrderedDict
+import errno
+from io import StringIO
+import os.path
+import sys
+from typing import Dict, List, Tuple
+
+from lxml import etree
+
 
 def usage():
     helpstr='''
@@ -39,13 +41,13 @@ def get_qname(qname, revns):
     return lname
 
 def get_dict_list_value(value):
-    '''Initialize list for xpath dictionary values.
+    '''Initialize tuple for xpath dictionary values.
     Items:
         0) qualified xpath
         1) count of elements found using the latter
-        2) dictionary of element attributes
+        2) list of element's attribute names
     '''
-    return [value, None, None]
+    return (value, 0, [])
 
 def build_path_from_parts(xmap, xp, qname, revns):
     '''Split path on unnamed elements and build qualified xpath
@@ -79,11 +81,11 @@ def build_path_from_parts(xmap, xp, qname, revns):
         elif f'{last}/*{p}' in xmap:
             last = f'{last}/*{p}'
 
-def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*') -> Dict:
+def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*') -> OrderedDict[str, Tuple[str, int, List[str]]]:
     '''Parse XML document that may contain anonymous namespace.
     Returns a dict with original xpath as keys, xpath with qualified names and count of elements found with the latter.
         xmap = {
-            "/some/xpath/*[1]": ["/some/xpath/ns:ele1", 1, {"id": "unique"}]
+            "/some/xpath/*[1]": ("/some/xpath/ns:ele1", 1, ["id", "class"])
         }
     To get the qualified xpath:
         xmap['/some/xpath/*[1]'][0]
@@ -138,11 +140,11 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
         
         # Add attributes names to current xmap value
         if ele.attrib is not None:
-            xmap[xp][2] = ele.attrib.keys()
+            xmap[xp][2].extend(ele.attrib.keys())
             
     # count elements found with these xpath expressions
     for k, v in xmap.items():
-        xmap[k][1] = int(tree.xpath(f"count({v[0]})", namespaces=nsmap))
+        xmap[k]= v[0], int(tree.xpath(f"count({v[0]})", namespaces=nsmap)), v[2]
     return xmap
 
 def print_xpaths(xmap: Dict, mode: str ="path"):
@@ -207,19 +209,19 @@ def build_namespace_dict(tree):
         nsmap[ns] = v
     return nsmap
 
-def fromstring(xmlstr: str, *, xpath_base: str = '//*') -> (etree._ElementTree, Dict[str, str], Tuple[str, int, Dict[str, str]]):
+def fromstring(xmlstr: str, *, xpath_base: str = '//*') -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
     doc = etree.parse(StringIO(xmlstr))
     return parse(file=None, itree=doc, xpath_base=xpath_base)
     
-def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*') -> (etree._ElementTree, Dict[str, str], Tuple[str, int, Dict[str, str]]):
+def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*') -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
     '''Parse given xml file, find xpath expressions in it and return
     - The ElementTree for further usage
     - The sanitized namespaces map (no None keys)
     - A dictionary with original xpath as keys, and parsed xpaths, count of elements found with them and names of attributes of that elements:
     
     xmap = {
-        "/some/xpath/*[1]": [ "/some/xpath/ns:ele1", 1, ["id", "class"] ],
-        "/some/other/xpath/*[3]": [ "/some/other/xpath/ns:other", 1, ["attr1", "attr2"] ],
+        "/some/xpath/*[1]": ( "/some/xpath/ns:ele1", 1, ["id", "class"] ),
+        "/some/other/xpath/*[3]": ( "/some/other/xpath/ns:other", 1, ["attr1", "attr2"] ),
     }
     
     Parameters

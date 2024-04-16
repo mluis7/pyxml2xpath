@@ -148,16 +148,16 @@ Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
 ```python
 xmap = {
-    "/some/xpath/*[1]": [ 
+    "/some/xpath/*[1]": (
         "/some/xpath/ns:ele1", 
         1, 
         ["id", "class"] 
-     ],
-    "/some/other/xpath/*[3]": [ 
+     ),
+    "/some/other/xpath/*[3]": ( 
         "/some/other/xpath/ns:other", 
         1, 
         ["attr1", "attr2"] 
-     ],
+     ),
 }
 ```
 
