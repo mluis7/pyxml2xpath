@@ -19,6 +19,24 @@ Table of contents
 ## Description
 Found XPath expressions are tested against the document and the count of found elements is returned. See also `parse()` method below.
 
+```bash
+pyxml2xpath tests/resources/simple-no-ns.xml
+```
+```
+Running...
+file      : tests/resources/simple-no-ns.xml
+mode      : path
+xpath_base: '//*'
+namespaces: {}
+
+/root
+/root/child[1]
+/root/child[2]
+/root/another
+
+Found   4 xpath expressions for elements
+```
+
 A spin off of [xml2xpath Bash script](https://github.com/mluis7/xml2xpath). Both projects rely on [libxml2](https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home) implementation.
 
 ## Build and install
@@ -28,18 +46,32 @@ cd pyxml2xpath
 python3.9 -m build
 python3.9 -m pip install dist/pyxml2xpath-0.2.0-py3-none-any.whl --upgrade
 ```
+
+Alternative without cloning the repo yourself
+
+```
+pip3.9 install git+https://github.com/mluis7/pyxml2xpath.git
+```
+
 Soon on PyPi!
 
 ## Command line usage
-`pyxml2xpath <file path> [mode]`
+`pyxml2xpath <file path> [mode] [initial xpath expression]`
 
-`pyxml2xpath ~/tmp/soap-ws-oasis.xml`
+```bash
+pyxml2xpath tests/resources/soap.xml
+
+pyxml2xpath tests/resources/HL7.xml '' '//*[local-name()= "act"]'
+
+pyxml2xpath tests/resources/HL7.xml 'values' '//*[local-name()= "act"]'
+```
+
 
 ## Module usage
 
 ```python
 from xml2xpath import xml2xpath
-tree, nsmap, xmap = xml2xpath.parse('/home/luis/tmp/wiki.xml')
+tree, nsmap, xmap = xml2xpath.parse('tests/resources/wiki.xml')
 xml2xpath.print_xpath(xmap, 'all')
 ```
 
@@ -49,7 +81,7 @@ If an element tree created with `lxml` is available, use it and avoid double par
 from lxml import etree
 from xml2xpath import xml2xpath
 
-doc = etree.parse("/home/luis/tmp/wiki.xml")
+doc = etree.parse("tests/resources/wiki.xml")
 tree, nsmap, xmap = xml2xpath.parse(file=None,itree=doc)
 
 ```
@@ -87,7 +119,7 @@ xmap = parse(file,  xpath_base='//*[local-name() = "author"]')[2]
 or
 
 ```
-pyxml2xpath HL7.xml '' '//*[local-name()= "act"]'
+pyxml2xpath tests/resources/HL7.xml '' '//*[local-name()= "act"]'
 Running...
 file: HL7.xml
 mode: path
@@ -112,22 +144,26 @@ Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
 - The ElementTree for further usage
 - The sanitized namespaces map (no None keys)
-- A dictionary with original xpath as keys and as values a list of parsed xpaths, count of elements found with them and a dictionary with attributes of that elements:
+- A dictionary with original xpath as keys and as values a list of parsed xpaths, count of elements found with them and a list with names of attributes of that elements:
 
 ```python
 xmap = {
-    "/some/xpath/*[1]": [ 
+    "/some/xpath/*[1]": (
         "/some/xpath/ns:ele1", 
         1, 
-        {"id": "unique"} 
-     ],
-    "/some/other/xpath/*[3]": [ 
+        ["id", "class"] 
+     ),
+    "/some/other/xpath/*[3]": ( 
         "/some/other/xpath/ns:other", 
         1, 
-        {"name": "myname", "value": "myvalue"} 
-     ],
+        ["attr1", "attr2"] 
+     ),
 }
 ```
+
+Namespaces dictionary adds a prefix for default namespaces.
+If there are more than 1 default namespace, prefix will be incremental:
+`ns98`, `ns99` and so on. See file `tests/resources/soap.xml`
 
 **Parameters**
 
@@ -168,7 +204,7 @@ test_01.TestPyXml2Xpath01.test_fromstring_html_fragment
 from lxml import html
 from xml2xpath import xml2xpath
 
-filepath = 'resources/html5-small.html.xml'
+filepath = 'tests/resources/html5-small.html.xml'
 hdoc = html.parse(filepath)
 xpath_base = '//*[@id="math"]'
 
@@ -178,12 +214,12 @@ xmap = xml2xpath.parse(None, itree=hdoc, xpath_base=xpath_base)[2]
 or on command line
 
 ```
-pyxml2xpath resources/html5-small.html.xml 'all' '//*[@id="math"]'
+pyxml2xpath tests/resources/html5-small.html.xml 'all' '//*[@id="math"]'
 ```
 
 ```
 Running...
-file: resources/html5-small.html.xml
+file: tests/resources/html5-small.html.xml
 mode: all
 xpath_base: //*[@id="math"]
 
