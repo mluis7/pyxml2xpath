@@ -14,10 +14,14 @@ Table of contents
 * [Method parse(...)](#method-parse)
 * [Print result modes](#print-result-modes)
 * [HTML support](#html-support)
+* [Unqualified vs. Qualified](@unqualified-vs-qualified)
 * [Testing](#testing)
 
 ## Description
-Found XPath expressions are tested against the document and the count of found elements is returned. See also `parse()` method below.
+Iterate elements in XML document and build all existing XPath expression for them.
+Also, build qualified expressions from unqualified ones taking into account namespaces:
+
+`tree.getpath(element)  ->  /*/*[9]/*[6]  ->  /ns98:feed/ns98:entry/ns98:author`
 
 ```bash
 pyxml2xpath tests/resources/simple-no-ns.xml
@@ -144,7 +148,7 @@ Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
 - The ElementTree for further usage
 - The sanitized namespaces map (no None keys)
-- A dictionary with original xpath as keys and as values a list of parsed xpaths, count of elements found with them and a list with names of attributes of that elements:
+- A dictionary with unqualified xpath as keys and as values a tuple of qualified xpaths, count of elements found with them and a list with names of attributes of that elements:
 
 ```python
 xmap = {
@@ -163,7 +167,7 @@ xmap = {
 
 Namespaces dictionary adds a prefix for default namespaces.
 If there are more than 1 default namespace, prefix will be incremental:
-`ns98`, `ns99` and so on. See file `tests/resources/soap.xml`
+`ns98`, `ns99` and so on. Try testing file `tests/resources/soap.xml`
 
 **Parameters**
 
@@ -178,8 +182,8 @@ Print xpath expressions and validate by count of elements found with it.
 
 - `path`  : print elements xpath expressions (default)  
 - `all`   : also print attribute xpath expressions  
-- `raw`   : print unqualified xpath and found values (list)  
-- `values`: print list of found values only  
+- `raw`   : print unqualified xpath and found values (tuple)  
+- `values`: print tuple of found values only  
 
 `pyxml2xpath ~/tmp/soap-ws-oasis.xml 'all'`
 
@@ -233,6 +237,64 @@ xpath_base: //*[@id="math"]
 
 Found   2 xpath expressions for elements
 Found   1 xpath expressions for attributes
+```
+
+## Unqualified vs. Qualified
+Symbolic element tree of `tests/resources/wiki.xml` showing position of unqualified elements.
+
+```
+feed
+  id
+  title
+  link
+  link
+  updated
+  subtitle
+  generator
+  entry
+    id
+    title
+    link
+    updated
+    summary
+    author
+      name
+  entry   <- 9th child of 'feed'
+    id
+    title
+    link
+    updated
+    summary
+    author   <- 6th child of 'entry'
+      name
+  entry
+    id
+    title
+    link
+    updated
+    summary
+    author
+      name
+```
+
+`tree.getpath(element)` could return a fully qualified expression, a fully unqualified expression or a mix of both `/soap:Envelope/soap:Body/*[2]`.
+
+Unqualified parts are converted to qualified ones.
+
+```
+/*/*[9]/*[6]
+/*           # root element
+  /*[9]      # 9th child of root element. Tag name unknown.
+       /*[6] # 6th child of previous element.  Tag name unknown.
+```
+
+qualified expression using appropriate namespace prefix
+
+```
+/*/*[9]/*[6]   /ns98:feed/ns98:entry/ns98:author
+/*           # /ns98:feed
+  /*[9]      #           /ns98:entry
+       /*[6] #                      /ns98:author
 ```
 
 ## Testing

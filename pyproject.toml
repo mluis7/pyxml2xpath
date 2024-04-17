@@ -1,10 +1,11 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyxml2xpath"
-version = "0.2.1"
+dynamic = ["version"]
+
 dependencies = [
   "lxml"
 ]
@@ -32,3 +33,6 @@ pyxml2xpath = "xml2xpath.xml2xpath:main"
 pythonpath = [
   "."
 ]
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}

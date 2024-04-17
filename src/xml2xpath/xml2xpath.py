@@ -144,7 +144,12 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
             
     # count elements found with these xpath expressions
     for k, v in xmap.items():
-        xmap[k]= v[0], int(tree.xpath(f"count(({v[0]})[1])", namespaces=nsmap)), v[2]
+        # Define a nodeset with qualified expression: (/ns98:feed/ns98:entry/ns98:author)
+        # and get the first element or none defined by the count of unqualified expression: count(/*/*[9]/*[6])
+        # (/ns98:feed/ns98:entry/ns98:author)[count(/*/*[9]/*[6])]
+        # for example: count((author author author)[1])
+        # the count of that will be 1 and it means both expressions were validated to return results.
+        xmap[k]= v[0], int(tree.xpath(f"count(({v[0]})[count({k})])", namespaces=nsmap)), v[2]
     return xmap
 
 def print_xpaths(xmap: Dict, mode: str ="path"):

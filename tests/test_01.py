@@ -13,6 +13,7 @@ class TestPyXml2Xpath01:
             print(f"    --> Found {len(xmap.keys())} xpath expressions")
             assert len(xmap.keys()) > 0
             # assert all found expressions exist at least once in the document.
+            # all expressions found at least 1 element
             assert len([v for v in xmap.values() if v[1] == 0]) == 0
     
     def test_parse_with_initial_xpath(self):
