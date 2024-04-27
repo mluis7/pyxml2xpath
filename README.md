@@ -68,6 +68,13 @@ pyxml2xpath tests/resources/soap.xml
 pyxml2xpath tests/resources/HL7.xml '' '//*[local-name()= "act"]'
 
 pyxml2xpath tests/resources/HL7.xml 'values' '//*[local-name()= "act"]'
+
+# mode                            : all
+# starting at xpath               : none
+# count elements                  : False
+# Limit elements                  : 11
+# Do not show banner (just xpaths): true
+pyxml2xpath ~/tmp/test.html all none none 11 true
 ```
 
 
@@ -142,7 +149,7 @@ Found   6 xpath expressions for elements
 ```
 
 ### Method parse(...)
-Signature: `parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*')`
+Signature: `parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*', with_count: bool = WITH_COUNT, max_items: int = MAX_ITEMS)`
 
 Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
@@ -174,6 +181,8 @@ If there are more than 1 default namespace, prefix will be incremental:
 - `file: str` file path string.
 - `itree: lxml.etree._ElementTree` ElementTree object.
 - `xpath_base: str` xpath expression To start searching xpaths for.
+- `with_count: bool` Include count of elements found with each expression. Default: False
+- `max_items: int` limit the number of parsed elements. Default: 100000
         
 ## Print result modes
 Print xpath expressions and validate by count of elements found with it.  
