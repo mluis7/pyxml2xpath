@@ -9,7 +9,7 @@ class TestPyXml2Xpath01:
         print("")
         for xfile in sample_paths:
             print(f"Testing '{xfile}'")
-            xmap = xml2xpath.parse(xfile,  xpath_base=xpath_base)[2]
+            xmap = xml2xpath.parse(xfile,  xpath_base=xpath_base, with_count=True)[2]
             print(f"    --> Found {len(xmap.keys())} xpath expressions")
             assert len(xmap.keys()) > 0
             # assert all found expressions exist at least once in the document.
@@ -21,7 +21,7 @@ class TestPyXml2Xpath01:
         xpath_base = '//*[local-name()="incident"]'
         print(f"\nTesting '{filepath}' starting at: '{xpath_base}'")
         
-        nsmap, xmap = xml2xpath.parse(filepath,  xpath_base=xpath_base)[1:]
+        nsmap, xmap = xml2xpath.parse(filepath, xpath_base=xpath_base, with_count=True)[1:]
         print(f"    --> Found {len(xmap.keys())} xpath expressions")
         print(f"    --> Found {len(nsmap.keys())} namespaces")
         print(f"    --> nsmap: {nsmap}")
@@ -37,7 +37,7 @@ class TestPyXml2Xpath01:
             xmlstr = fd.read()
             print(f"\nTesting fromstring() from '{filepath}'")
         
-            nsmap, xmap = xml2xpath.fromstring(xmlstr)[1:]
+            nsmap, xmap = xml2xpath.fromstring(xmlstr, with_count=True)[1:]
             print(f"    --> Found {len(xmap.keys())} xpath expressions")
             print(f"    --> Found {len(nsmap.keys())} namespaces")
             print(f"    --> nsmap: {nsmap}")
@@ -54,7 +54,7 @@ class TestPyXml2Xpath01:
             xpath_base = '//*[local-name()="incident"]'
             print(f"\nTesting fromstring() from '{filepath}' starting at: '{xpath_base}'")
         
-            nsmap, xmap = xml2xpath.fromstring(xmlstr,  xpath_base=xpath_base)[1:]
+            nsmap, xmap = xml2xpath.fromstring(xmlstr,  xpath_base=xpath_base, with_count=True)[1:]
             print(f"    --> Found {len(xmap.keys())} xpath expressions")
             print(f"    --> Found {len(nsmap.keys())} namespaces")
             print(f"    --> nsmap: {nsmap}")
