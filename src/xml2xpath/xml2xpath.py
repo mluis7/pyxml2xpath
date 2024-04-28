@@ -9,6 +9,7 @@ from typing import Dict, List, Tuple
 
 from lxml import etree
 
+XPATH_ALL = '//*'
 WITH_COUNT = False
 MAX_ITEMS = 100000
 OUT_FD = sys.stdout
@@ -50,16 +51,20 @@ def get_qname(qname, revns):
         lname = f"{revns.get(qname.namespace)}:{qname.localname}"
     return lname
 
-def get_dict_list_value(value):
+def get_dict_list_value(value, element):
     '''Initialize tuple for xpath dictionary values.
     Items:
         0) qualified xpath
         1) count of elements found using the latter
         2) list of element's attribute names
     '''
+    
+    # Add attributes names to current xmap value
+    if element is not None and element.attrib is not None:
+        return (value, 0, element.attrib.keys())
     return (value, 0, [])
 
-def build_path_from_parts(xmap, xp, qname, revns):
+def build_path_from_parts(xmap, xp, qname, revns, ele):
     '''Split path on unnamed elements and build qualified xpath
         /soap:root/soap:xpath/*[1]
     could be converted to
@@ -82,16 +87,16 @@ def build_path_from_parts(xmap, xp, qname, revns):
     for p in parts[1:]:
         if f'{last}/*{p}' not in xmap:
             xval = f'{xmap.get(last) or ""}/{get_qname(qname, revns)}'
-            xmap[xp] = get_dict_list_value(xval)
+            xmap[xp] = get_dict_list_value(xval, ele)
             last = xp
         elif xp[-1] not in ['*', ']']:
             last = xp.split(']/')[0] + ']'
             xval = f'{xmap.get(last) or ""}/{get_qname(qname, revns)}'
-            xmap[xp] = get_dict_list_value(xval)
+            xmap[xp] = get_dict_list_value(xval, ele)
         elif f'{last}/*{p}' in xmap:
             last = f'{last}/*{p}'
 
-def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*', *, with_count: bool = WITH_COUNT, max_items: int = MAX_ITEMS) -> OrderedDict[str, Tuple[str, int, List[str]]]:
+def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = XPATH_ALL, *, with_count: bool = WITH_COUNT, max_items: int = MAX_ITEMS) -> OrderedDict[str, Tuple[str, int, List[str]]]:
     '''Parse XML document that may contain anonymous namespace.
     Returns a dict with original xpath as keys, xpath with qualified names and count of elements found with the latter.
         xmap = {
@@ -126,7 +131,7 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
             # or element does not have namespaces
             # e.g.:
             #        /root/child
-            xmap[xp]= get_dict_list_value(xp)
+            xmap[xp]= get_dict_list_value(xp, ele)
         else:
             # Element may contain qualified and unqualified parts
             # /soapenv:Envelope/soapenv:Body/*/*[2]
@@ -138,16 +143,16 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = '//*
                 xpp = tree.getpath(prnt)
                 # parent of current element was already parsed so just append current qualified name
                 if xpp in xmap:
-                    xmap[xp] = get_dict_list_value(f'{xmap[xpp][0]}/{get_qname(qname, revns)}')
+                    xmap[xp] = get_dict_list_value(f'{xmap[xpp][0]}/{get_qname(qname, revns)}', ele)
                 else:
                     # element's parent exists but it's not present on xmap.
                     # Adding it and then adding current element.
-                    xmap[xpp]= get_dict_list_value(f"//{get_qname(pqname, revns)}")
-                    xmap[xp] = get_dict_list_value(f'{xmap[xpp][0]}/{get_qname(qname, revns)}')
+                    xmap[xpp]= get_dict_list_value(f"//{get_qname(pqname, revns)}", ele)
+                    xmap[xp] = get_dict_list_value(f'{xmap[xpp][0]}/{get_qname(qname, revns)}', ele)
             else:
                 # Probably the first unqualified xpath. Has no parent and is not on xmap yet
                 #print(f"DEBUG: Parsing root: {xp}", file=sys. stderr)
-                build_path_from_parts(xmap, xp, qname, revns)
+                build_path_from_parts(xmap, xp, qname, revns, ele)
         
         # Add attributes names to current xmap value
         if ele.attrib is not None:
