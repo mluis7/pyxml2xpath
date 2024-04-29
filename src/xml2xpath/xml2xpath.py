@@ -1,18 +1,21 @@
 '''Find all xpath expressions on XML document'''
 
+
 from collections import OrderedDict
-import errno
 from io import StringIO
 from os import path, devnull, strerror
-import sys
 from typing import Dict, List, Tuple
+import errno
+import sys
 
 from lxml import etree
+import timeit
 
 XPATH_ALL = '//*'
 WITH_COUNT = False
 MAX_ITEMS = 100000
 OUT_FD = sys.stdout
+modes = ['xpath', 'all', 'raw', 'values']
 
 def usage():
     helpstr='''
@@ -80,7 +83,9 @@ def build_path_from_parts(xmap, xp, qname, revns, ele):
     qname: QName
         element's qualfied name object
     revns: dict
-        namespace reverse map - URI to prefix.'''
+        namespace reverse map - URI to prefix.
+    ele: etree._ElementTree
+        current element'''
     
     parts = [p for p in xp.split("/*")]
     last = parts[0]
@@ -96,9 +101,15 @@ def build_path_from_parts(xmap, xp, qname, revns, ele):
         elif f'{last}/*{p}' in xmap:
             last = f'{last}/*{p}'
 
-def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = XPATH_ALL, *, with_count: bool = WITH_COUNT, max_items: int = MAX_ITEMS) -> OrderedDict[str, Tuple[str, int, List[str]]]:
+def parse_mixed_ns(tree: etree._ElementTree,
+                   nsmap: Dict,
+                   xpath_base: str = XPATH_ALL,
+                   *,
+                   with_count: bool = WITH_COUNT, 
+                   max_items: int = MAX_ITEMS) -> OrderedDict[str, Tuple[str, int, List[str]]]:
     '''Parse XML document that may contain anonymous namespace.
-    Returns a dict with original xpath as keys, xpath with qualified names and count of elements found with the latter.
+    Returns a dict with original xpath as keys, xpath with qualified names and
+    count of elements found with the latter.
         xmap = {
             "/some/xpath/*[1]": ("/some/xpath/ns:ele1", 1, ["id", "class"])
         }
@@ -110,27 +121,34 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = XPAT
     tree: lxml.etree._ElementTree
         ElementTree from current document
     nsmap: dict
-        namespaces dictionary from current document'''
+        namespaces dictionary from current document
+    xpath_base: str
+        Xpath expression to start from
+    with_count: bool
+        add count of found elements (performance cost on large documents.
+    max_items: int
+        max number of elements to parse. Default: 100000'''
     
+    #empty_dict = True
+    start = timeit.default_timer()
     revns = {v:k or 'ns' for k,v in nsmap.items()}
     elements = tree.xpath(xpath_base, namespaces=nsmap)
-    xmap = OrderedDict()
-    for ele in elements[:max_items]:
-        xp = tree.getpath(ele)
-        #print(f"DEBUG: {xp}", file=sys. stderr)
-        if xp in xmap:
-            # Do not update an existing element. Should not enter here, but ...
-            print(f"ERROR: duplicated path: {xp}",file=sys. stderr)
-            continue
+    t1 = timeit.default_timer()
+    print(f"tree.xpath: {t1 - start:.2f}", file=sys. stderr)
+
+    xmap = OrderedDict.fromkeys(map(tree.getpath, elements[:max_items]))
+    t2 = timeit.default_timer()
+    print(f"dict preloaded with: {len(xmap.keys())} keys; {t2 - t1:.2f}", file=sys. stderr)
+
+    for idx, xp in enumerate(xmap.keys()):
+        ele = elements[idx]
 
         qname = etree.QName(ele.tag)
         if '*' not in xp:
             # xpath expression is already qualified
-            # e.g.:
-            #        /soapenv:Envelope/soapenv:Body
+            # e.g.: /soapenv:Envelope/soapenv:Body
             # or element does not have namespaces
-            # e.g.:
-            #        /root/child
+            # e.g.: /root/child
             xmap[xp]= get_dict_list_value(xp, ele)
         else:
             # Element may contain qualified and unqualified parts
@@ -141,35 +159,39 @@ def parse_mixed_ns(tree: etree._ElementTree, nsmap: Dict, xpath_base: str = XPAT
                 pqname = etree.QName(prnt.tag)
                 # parent's (unqualified) xpath
                 xpp = tree.getpath(prnt)
-                # parent of current element was already parsed so just append current qualified name
+                # parent of current element was already parsed so
+                # just append current qualified name
                 if xpp in xmap:
+                    if xmap[xpp] is None:
+                        xmap[xpp]= get_dict_list_value(f"//{get_qname(pqname, revns)}", ele)
                     xmap[xp] = get_dict_list_value(f'{xmap[xpp][0]}/{get_qname(qname, revns)}', ele)
                 else:
                     # element's parent exists but it's not present on xmap.
-                    # Adding it and then adding current element.
-                    xmap[xpp]= get_dict_list_value(f"//{get_qname(pqname, revns)}", ele)
-                    xmap[xp] = get_dict_list_value(f'{xmap[xpp][0]}/{get_qname(qname, revns)}', ele)
+                    # Adding it as preceding current element but not to xmap.
+                    prfx = '//'
+                    if prnt == tree.getroot():
+                        prfx = '/'
+                    xmap[xp] = get_dict_list_value(f'{prfx}{get_qname(pqname, revns)}/{get_qname(qname, revns)}', ele)
             else:
                 # Probably the first unqualified xpath. Has no parent and is not on xmap yet
                 #print(f"DEBUG: Parsing root: {xp}", file=sys. stderr)
                 build_path_from_parts(xmap, xp, qname, revns, ele)
-        
-        # Add attributes names to current xmap value
-        if ele.attrib is not None:
-            xmap[xp][2].extend(ele.attrib.keys())
             
     # count elements found with these xpath expressions
     if with_count:
         for k, v in xmap.items():
-            # Define a nodeset with qualified expression: (/ns98:feed/ns98:entry/ns98:author)
-            # and get the first element or none defined by the count of unqualified expression: count(/*/*[9]/*[6])
-            # (/ns98:feed/ns98:entry/ns98:author)[count(/*/*[9]/*[6])]
-            # for example: count((author author author)[1])
-            # the count of that will be 1 and it means both expressions were validated to return results.
-            xmap[k]= v[0], int(tree.xpath(f"count(({v[0]})[count({k})])", namespaces=nsmap)), v[2]
+            # Count of elements found with qualified expression
+            # Should never be 0.
+            xmap[k]= v[0], int(tree.xpath(f"count({v[0]})", namespaces=nsmap)), v[2]
+    t3 = timeit.default_timer()
+    print(f"parse finished: {t3 - t2:.2f}", file=sys. stderr)
     return xmap
 
-def print_xpaths(xmap: Dict, mode: str ="path", *, with_count: bool = WITH_COUNT, out_fd = OUT_FD):
+def print_xpaths(xmap: Dict,
+                 mode: str ="path",
+                 *,
+                 with_count: bool = WITH_COUNT,
+                 out_fd = OUT_FD):
     '''Print xpath expressions and validate by count of elements found with it.
     mode: str
         path  : print elements xpath expressions (default)
@@ -181,33 +203,28 @@ def print_xpaths(xmap: Dict, mode: str ="path", *, with_count: bool = WITH_COUNT
     acount=0
     acountmsg=''
     
-    if mode in ["path", "all"]:
-        for unq_xpath, qxpath_lst in xmap.items():
-                print(qxpath_lst[0])
-                if qxpath_lst[1] <= 0 and with_count:
-                    # built xpath didn't find elements
-                    print(f"ERROR: {int(qxpath_lst[1])} elements found with {qxpath_lst[0]} xpath expression.\nOriginal xpath: {unq_xpath}", file=sys.stderr)
+    for unq_xpath, qual_xpath_lst in xmap.items():
+        if mode not in ['raw', 'values']:
+            print(qual_xpath_lst[0])
+            if qual_xpath_lst[1] <= 0 and with_count:
+                # built xpath didn't find elements
+                print(f"ERROR: {int(qual_xpath_lst[1])} elements found with {qual_xpath_lst[0]} xpath expression.\nUnqualified xpath: {unq_xpath}", file=sys.stderr)
     
-    if mode == "all":
-        #Print xpath for attributes
-        for unq_xpath, qxpath_lst in xmap.items():
-            if qxpath_lst[2] is None:
-                continue
-            #if qxpath_lst[1] > 0:
-            for a in qxpath_lst[2]:
-                print(f"{qxpath_lst[0]}/@{a}")
-                acount += 1
-        acountmsg = f"Found {acount:3} xpath expressions for attributes\n"
-    elif mode == "raw":
-        for key, value in xmap.items():
-            print(key, value)
-    elif mode == "values":
-        for key, value in xmap.items():
-            print(value)
+        if mode == "all":
+            #Print xpath for attributes
+            if qual_xpath_lst[2] is not []:
+                for a in qual_xpath_lst[2]:
+                    print(f"{qual_xpath_lst[0]}/@{a}")
+                    acount += 1
+                acountmsg = f"Found {acount:3} xpath expressions for attributes\n"
+        if mode == "raw":
+            print(unq_xpath, qual_xpath_lst)
+        elif mode == "values":
+            print(qual_xpath_lst)
                 
     print(f"\nFound {len(xmap.keys()):3} xpath expressions for elements\n{acountmsg}", file=out_fd)
 
-def build_namespace_dict(tree):
+def build_namespace_dict(tree: etree._ElementTree) ->  Dict[str, str]:
     '''Build a namespaces dictionary with prefix for default namespaces.
     If there are more than 1 default namespace, prefix will be incremental:
     ns98, ns99 and so on.'''
@@ -230,11 +247,18 @@ def build_namespace_dict(tree):
         nsmap[ns] = v
     return nsmap
 
-def fromstring(xmlstr: str, *, xpath_base: str = '//*', with_count: bool = WITH_COUNT, max_items: int = MAX_ITEMS) -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
+def fromstring(xmlstr: str, *,
+               xpath_base: str = '//*',
+               with_count: bool = WITH_COUNT,
+               max_items: int = MAX_ITEMS) -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
     doc = etree.parse(StringIO(xmlstr))
     return parse(file=None, itree=doc, xpath_base=xpath_base, with_count=with_count, max_items=max_items)
     
-def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*', with_count: bool = WITH_COUNT, max_items: int = MAX_ITEMS) -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
+def parse(file: str, *,
+          itree: etree._ElementTree = None,
+          xpath_base: str = XPATH_ALL,
+          with_count: bool = WITH_COUNT,
+          max_items: int = MAX_ITEMS) -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
     '''Parse given xml file, find xpath expressions in it and return
     - The ElementTree for further usage
     - The sanitized namespaces map (no None keys)
@@ -250,7 +274,7 @@ def parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*
         file: file path string
         itree: lxml.etree._ElementTree
                 ElementTree object
-        xpath_base: xpath expression so start searching xpaths for.
+        xpath_base: xpath expression to start searching xpaths for.
         with_count: Include count of elements found with each expression. Default: False
         max_items: limit the number of parsed elements. Default: 100000
     '''
@@ -278,10 +302,12 @@ def main():
 
     file = sys.argv[1]
     mode = "path"
-    xpath_base = "//*"
+    xpath_base = XPATH_ALL
     with_count = WITH_COUNT
     max_items = MAX_ITEMS
     out_fd = OUT_FD
+    no_banners = False
+    warns = None
     
     if not path.isfile(file):
         print(f"[Errno {errno.ENOENT}] {strerror(errno.ENOENT)}", file=sys.stderr)
@@ -293,16 +319,32 @@ def main():
         
         if i == 2:
             mode = arg
+            if mode not in modes:
+                print(f"ERROR: {strerror(errno.EINVAL)}.\nUnknown mode: '{mode}'. Must be one of: {modes} or ['', 'none'] to use 'xpath' default mode.", file=sys.stderr)
+                sys.exit(errno.EINVAL)
         elif i == 3:
             xpath_base = arg
         elif i == 4 and str(arg).lower() in ['yes', 'true']:
             with_count = True
         elif i == 5:
             max_items = int(arg)
+            if max_items > MAX_ITEMS:
+                warns = f"WARNING. max_items > {MAX_ITEMS}: {max_items}. It could take a significant time depending on document size."
+                if with_count:
+                    warns += f"\nWARNING. with_count=True. There's an additional performance cost on getting count of elements if document is big."
         elif i == 6 and str(arg).lower() in ['yes', 'true']:
+            # do not print any banner, just xpaths
+            no_banners =  True
             out_fd = open(devnull, 'w')
 
-    print(f"Running...\n{'file':10}: {file}\n{'mode':10}: {mode}\n{'xpath_base':10}: '{xpath_base}'\n{'with_count':10}: {with_count}\n{'max_items':10}: {max_items}", file=out_fd, flush=True)
+    print(f"Running...\n{'file':10}: {file}", file=out_fd, flush=True)
+    print(f"{'mode':10}: {mode}", file=out_fd, flush=True)
+    print(f"{'xpath_base':10}: '{xpath_base}'", file=out_fd, flush=True)
+    print(f"{'with_count':10}: {with_count}", file=out_fd, flush=True)
+    print(f"{'max_items':10}: {max_items}", file=out_fd, flush=True)
+    print(f"{'no_banners':10}: {no_banners}", file=out_fd, flush=True)
+    if warns is not None:
+        print(f"\n{warns}\n", file=sys.stderr)
     nsmap, xmap = parse(file,  xpath_base=xpath_base, with_count=with_count, max_items=max_items)[1:]
     print(f"namespaces: {nsmap}\n", file=out_fd, flush=True)
     print_xpaths(xmap, mode, out_fd=out_fd)
