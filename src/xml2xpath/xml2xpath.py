@@ -9,7 +9,6 @@ import errno
 import sys
 
 from lxml import etree
-import timeit
 
 XPATH_ALL = '//*'
 WITH_COUNT = False
@@ -89,6 +88,8 @@ def build_path_from_parts(xmap, xp, qname, revns, ele):
     
     parts = [p for p in xp.split("/*")]
     last = parts[0]
+    if xp == '/*':
+        xmap[xp] = get_dict_list_value(f"/{get_qname(qname, revns)}", ele)
     for p in parts[1:]:
         if f'{last}/*{p}' not in xmap:
             xval = f'{xmap.get(last) or ""}/{get_qname(qname, revns)}'
@@ -129,16 +130,10 @@ def parse_mixed_ns(tree: etree._ElementTree,
     max_items: int
         max number of elements to parse. Default: 100000'''
     
-    #empty_dict = True
-    start = timeit.default_timer()
     revns = {v:k or 'ns' for k,v in nsmap.items()}
     elements = tree.xpath(xpath_base, namespaces=nsmap)
-    t1 = timeit.default_timer()
-    print(f"tree.xpath: {t1 - start:.2f}", file=sys. stderr)
 
     xmap = OrderedDict.fromkeys(map(tree.getpath, elements[:max_items]))
-    t2 = timeit.default_timer()
-    print(f"dict preloaded with: {len(xmap.keys())} keys; {t2 - t1:.2f}", file=sys. stderr)
 
     for idx, xp in enumerate(xmap.keys()):
         ele = elements[idx]
@@ -177,20 +172,20 @@ def parse_mixed_ns(tree: etree._ElementTree,
                 #print(f"DEBUG: Parsing root: {xp}", file=sys. stderr)
                 build_path_from_parts(xmap, xp, qname, revns, ele)
             
-    # count elements found with these xpath expressions
-    if with_count:
-        for k, v in xmap.items():
+        # count elements found with these xpath expressions
+        if with_count:
             # Count of elements found with qualified expression
             # Should never be 0.
-            xmap[k]= v[0], int(tree.xpath(f"count({v[0]})", namespaces=nsmap)), v[2]
-    t3 = timeit.default_timer()
-    print(f"parse finished: {t3 - t2:.2f}", file=sys. stderr)
+            #print(f"DEBUG: {xp} {xmap[xp]}", file=sys. stderr)
+            xcount = int(tree.xpath(f"count({xmap[xp][0]})", namespaces=nsmap))
+            if xcount == 0:
+                print(f"ERROR: 0 elements found with {xp}. Possibly due to this bug: https://gitlab.gnome.org/GNOME/libxml2/-/issues/715", file=sys. stderr)
+            xmap[xp] = xmap[xp][0], xcount, xmap[xp][2]
     return xmap
 
 def print_xpaths(xmap: Dict,
                  mode: str ="path",
                  *,
-                 with_count: bool = WITH_COUNT,
                  out_fd = OUT_FD):
     '''Print xpath expressions and validate by count of elements found with it.
     mode: str
@@ -206,9 +201,6 @@ def print_xpaths(xmap: Dict,
     for unq_xpath, qual_xpath_lst in xmap.items():
         if mode not in ['raw', 'values']:
             print(qual_xpath_lst[0])
-            if qual_xpath_lst[1] <= 0 and with_count:
-                # built xpath didn't find elements
-                print(f"ERROR: {int(qual_xpath_lst[1])} elements found with {qual_xpath_lst[0]} xpath expression.\nUnqualified xpath: {unq_xpath}", file=sys.stderr)
     
         if mode == "all":
             #Print xpath for attributes
@@ -221,7 +213,7 @@ def print_xpaths(xmap: Dict,
             print(unq_xpath, qual_xpath_lst)
         elif mode == "values":
             print(qual_xpath_lst)
-                
+            
     print(f"\nFound {len(xmap.keys()):3} xpath expressions for elements\n{acountmsg}", file=out_fd)
 
 def build_namespace_dict(tree: etree._ElementTree) ->  Dict[str, str]:
