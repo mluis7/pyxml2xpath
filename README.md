@@ -336,7 +336,7 @@ To get some result messages run as
 
 `pytest --capture=no --verbose`
 
-**Verifying found keys**
+**Verifying found keys**  
 Compare `xmllint` and `pyxml2xpath` found keys
 
 ```bash
@@ -346,7 +346,7 @@ diff -u /tmp/HL7-raw-keys.txt /tmp/HL7-whereis-xmllint.txt
 ```
 No result returned.
 
-**Verifying found qualified expressions**
+**Verifying found qualified expressions**  
 Test found xpath qualified expressions with a different tool by counting elements found with them
 
 ```bash
