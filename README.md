@@ -14,7 +14,9 @@ Table of contents
 * [Method parse(...)](#method-parse)
 * [Print result modes](#print-result-modes)
 * [HTML support](#html-support)
-* [Unqualified vs. Qualified](@unqualified-vs-qualified)
+* [Unqualified vs. Qualified](#unqualified-vs-qualified)
+* [Performance](#performance)
+* [Known issues](#known-issues)
 * [Testing](#testing)
 
 ## Description
@@ -306,7 +308,59 @@ qualified expression using appropriate namespace prefix
        /*[6] #                      /ns98:author
 ```
 
+## Performance
+Performance degrades quickly for documents that produce more than 500k xpath expressions.  
+Measuring timings with `timeit` for main steps in `parsed_mixed_ns()` method it can be seen that most consuming task is initializing the result dictionary while the time taken by `lxml.parse()` method and processing unqualified expressions remains stable.  
+An effort was made to remove unnecessary iterations and to optimize dictionary keys preloading so the major penalty remains on the dictionary performance itself.
+
+With times in seconds:
+
+```
+tree.xpath: 1.08
+dict preloaded with: 750000 keys; 204.20
+parse finished: 2.10
+
+
+tree.xpath: 1.10
+dict preloaded with: 1000000 keys; 399.05
+parse finished: 2.60
+```
+
+Testing file: [Treebank dataset](https://aiweb.cs.washington.edu/research/projects/xmltk/xmldata/) - 82MB uncompressed, 2.4M xpath expressions.
+
+## Known issues
+- Count of elements fail with documents with long element names. See [issue pxx-13](https://github.com/mluis7/pyxml2xpath/issues/19)
+
 ## Testing
 To get some result messages run as
 
 `pytest --capture=no --verbose`
+
+**Verifying found keys**
+Compare `xmllint` and `pyxml2xpath` found keys
+
+```bash
+printf "%s\n" "setrootns" "whereis //*" "bye" | xmllint --shell resources/HL7.xml | grep -v '^[/] >' > /tmp/HL7-whereis-xmllint.txt
+pyxml2xpath resources/HL7.xml 'raw' none none none True | cut -d ' ' -f1 > /tmp/HL7-raw-keys.txt
+diff -u /tmp/HL7-raw-keys.txt /tmp/HL7-whereis-xmllint.txt
+```
+No result returned.
+
+**Verifying found qualified expressions**
+Test found xpath qualified expressions with a different tool by counting elements found with them
+
+```bash
+xfile='resources/HL7.xml'
+cmds=( "setrootns" "setns ns98=urn:hl7-org:v3" )
+
+for xpath in $(pyxml2xpath $xfile none none none none True | sort | uniq); do
+    cmds+=( "xpath count($xpath) > 0" )
+done
+
+printf "%s\n" "${cmds[@]}" | xmllint --shell "$xfile" | grep -v '^[/] >' | grep -v 'Object is a Boolean : true'
+
+if [ "$?" -ne 0 ]; then
+    echo "Success. Counts returned > 0"
+fi
+```
+
