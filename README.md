@@ -350,6 +350,7 @@ No result returned.
 Test found xpath qualified expressions with a different tool by counting elements found with them
 
 ```bash
+#!/bin/bash
 xfile='resources/HL7.xml'
 cmds=( "setrootns" "setns ns98=urn:hl7-org:v3" )
 
