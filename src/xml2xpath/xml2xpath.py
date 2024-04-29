@@ -180,6 +180,7 @@ def parse_mixed_ns(tree: etree._ElementTree,
             xcount = int(tree.xpath(f"count({xmap[xp][0]})", namespaces=nsmap))
             if xcount == 0:
                 print(f"ERROR: 0 elements found with {xp}. Possibly due to this bug: https://gitlab.gnome.org/GNOME/libxml2/-/issues/715", file=sys. stderr)
+                print(f"       element path without parent: {tree.getelementpath(ele)}", file=sys. stderr)
             xmap[xp] = xmap[xp][0], xcount, xmap[xp][2]
     return xmap
 
