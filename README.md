@@ -347,7 +347,7 @@ parse finished: 2.60
 Testing file: [Treebank dataset](https://aiweb.cs.washington.edu/research/projects/xmltk/xmldata/) - 82MB uncompressed, 2.4M xpath expressions.
 
 ## Known issues
-- Count of elements fail with documents with long element names. See [issue pxx-13](https://github.com/mluis7/pyxml2xpath/issues/19)
+- Count of elements fails with documents with long element names. See [issue pxx-13](https://github.com/mluis7/pyxml2xpath/issues/19)
 
 ## Testing
 To get some result messages run as
