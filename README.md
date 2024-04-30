@@ -15,6 +15,7 @@ Table of contents
 * [Print result modes](#print-result-modes)
 * [HTML support](#html-support)
 * [Unqualified vs. Qualified](#unqualified-vs-qualified)
+* [Initial Xpath Examples](#initial-xpath-examples)
 * [Performance](#performance)
 * [Known issues](#known-issues)
 * [Testing](#testing)
@@ -306,6 +307,23 @@ qualified expression using appropriate namespace prefix
 /*           # /ns98:feed
   /*[9]      #           /ns98:entry
        /*[6] #                      /ns98:author
+```
+
+## Initial Xpath Examples
+To use with 3rd command line argument or `xpath_base` named parameter.
+
+```
+# Elements, comments and PIs
+//* | //processing-instruction() | //comment()
+
+# A processing instruction with a comment preceding sibling
+//processing-instruction("pitest")[preceding-sibling::comment()]
+
+# Comment following a ns98:typeId element
+//comment()[preceding-sibling::ns98:typeId[parent::ns98:ClinicalDocument]][1]
+
+# A comment containing specified text.
+//comment()[contains(., "before root")]
 ```
 
 ## Performance
