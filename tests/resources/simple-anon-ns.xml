@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?pi_before_root_test?>
+<!-- comment before root -->
 <root id="doc1" xmlns="http://simple.example.com/ns1">
     <ele1 id="1">
         <child1>
@@ -6,6 +8,8 @@
         </child1>
     </ele1>
     <ele1  id="2">
+        <!-- comment before PI -->
+        <?pitest proc-instruc?>  
         <child1>
             <grandchild1>content1</grandchild1>
         </child1>

@@ -89,6 +89,33 @@ class TestPyXml2Xpath01:
         print(f"    --> Found {len(xmap.keys())} xpath expressions")
         assert len(xmap) == 14
     
+    def test_parse_processing_instruction_initial_xpath(self):
+        filepath = 'resources/simple-ns.xml'
+        xpath_base = '//processing-instruction("pitest")[preceding-sibling::comment()]'
+        print(f"\nTesting '{filepath}' starting at: '{xpath_base}'")
+        
+        nsmap, xmap = xml2xpath.parse(filepath, xpath_base=xpath_base, with_count=True)[1:]
+        print(f"    --> Found {len(xmap.keys())} xpath expressions")
+        print(f"    --> Found {len(nsmap.keys())} namespaces")
+        print(f"    --> nsmap: {nsmap}")
+        
+        assert len([v for v in xmap.values() if v[1] == 0]) == 0
+        assert len(xmap.keys()) == 1, "1 processing-instruction found"
+    
+    def test_parse_get_everything(self):
+        filepath = 'resources/simple-anon-ns.xml'
+        xpath_base = xml2xpath.XPATH_REALLY_ALL
+        print(f"\nTesting '{filepath}' starting at: '{xpath_base}'")
+        
+        nsmap, xmap = xml2xpath.parse(filepath, xpath_base=xpath_base, with_count=True)[1:]
+        print(f"    --> Found {len(xmap.keys())} xpath expressions")
+        print(f"    --> Found {len(nsmap.keys())} namespaces")
+        print(f"    --> nsmap: {nsmap}")
+        
+        assert len([v for v in xmap.values() if v[1] == 0]) == 0
+        assert len(xmap.keys()) == 11
+        assert len([k for k in xmap.keys() if "comment()" in k]) == 2
+        assert len([k for k in xmap.keys() if "processing-instruction(" in k]) == 2
     
     def test_compare_order(self):
         '''Triggered by

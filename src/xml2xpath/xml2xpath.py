@@ -11,6 +11,7 @@ import sys
 from lxml import etree
 
 XPATH_ALL = '//*'
+XPATH_REALLY_ALL = f'{XPATH_ALL} | //processing-instruction() | //comment()'
 WITH_COUNT = False
 MAX_ITEMS = 100000
 OUT_FD = sys.stdout
@@ -137,8 +138,13 @@ def parse_mixed_ns(tree: etree._ElementTree,
 
     for idx, xp in enumerate(xmap.keys()):
         ele = elements[idx]
+        
+        # limited support for comments and processing instructions
+        # type(ele): etree._Comment or etree._ProcessingInstruction
+        if type(ele.tag) is not str:
+            xmap[xp] = xp, int(tree.xpath(f"count({xp})", namespaces=nsmap)) if with_count else 0, None 
+            continue
 
-        qname = etree.QName(ele.tag)
         if '*' not in xp:
             # xpath expression is already qualified
             # e.g.: /soapenv:Envelope/soapenv:Body
@@ -150,6 +156,7 @@ def parse_mixed_ns(tree: etree._ElementTree,
             # /soapenv:Envelope/soapenv:Body/*/*[2]
             # parent may exist even if xpath_base is a relative path: //soapenv:Body
             prnt = ele.getparent()
+            qname = etree.QName(ele.tag)
             if prnt is not None:
                 pqname = etree.QName(prnt.tag)
                 # parent's (unqualified) xpath
