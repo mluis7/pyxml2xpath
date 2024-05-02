@@ -7,6 +7,8 @@
     </ns:ele1>
     <ns:ele2  id="2">
         <ns:child1>
+            <!-- comment before PI -->
+            <?pitest proc-instruc?>
             <ns:grandchild1>content1</ns:grandchild1>
         </ns:child1>
     </ns:ele2>

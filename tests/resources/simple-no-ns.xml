@@ -1,5 +1,7 @@
 <root>
   <child>Child 1</child>
   <child>Child 2</child>
+  <!-- comment before PI -->
+  <?pitest proc-instruc?>
   <another>Child 3</another>
 </root>

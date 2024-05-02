@@ -11,6 +11,7 @@ import sys
 from lxml import etree
 
 XPATH_ALL = '//*'
+XPATH_REALLY_ALL = f'{XPATH_ALL} | //processing-instruction() | //comment()'
 WITH_COUNT = False
 MAX_ITEMS = 100000
 OUT_FD = sys.stdout
@@ -46,14 +47,14 @@ def usage():
     '''
     print(helpstr)
 
-def get_qname(qname, revns):
-    '''Get qualified name'''
+def _get_qualified_name(qname, revns):
+    '''Get qualified name as <prefix>:<local-name>'''
     lname = qname.localname
     if revns.get(qname.namespace) is not None:
         lname = f"{revns.get(qname.namespace)}:{qname.localname}"
     return lname
 
-def get_dict_list_value(value, element):
+def _get_dict_list_value(value, element):
     '''Initialize tuple for xpath dictionary values.
     Items:
         0) qualified xpath
@@ -62,11 +63,9 @@ def get_dict_list_value(value, element):
     '''
     
     # Add attributes names to current xmap value
-    if element is not None and element.attrib is not None:
-        return (value, 0, element.attrib.keys())
-    return (value, 0, [])
+    return (value, 0, [*element.keys()])
 
-def build_path_from_parts(xmap, xp, qname, revns, ele):
+def _build_path_from_parts(xmap, xp, qname, revns, ele):
     '''Split path on unnamed elements and build qualified xpath
         /soap:root/soap:xpath/*[1]
     could be converted to
@@ -89,16 +88,16 @@ def build_path_from_parts(xmap, xp, qname, revns, ele):
     parts = [p for p in xp.split("/*")]
     last = parts[0]
     if xp == '/*':
-        xmap[xp] = get_dict_list_value(f"/{get_qname(qname, revns)}", ele)
+        xmap[xp] = _get_dict_list_value(f"/{_get_qualified_name(qname, revns)}", ele)
     for p in parts[1:]:
         if f'{last}/*{p}' not in xmap:
-            xval = f'{xmap.get(last) or ""}/{get_qname(qname, revns)}'
-            xmap[xp] = get_dict_list_value(xval, ele)
+            xval = f'{xmap.get(last) or ""}/{_get_qualified_name(qname, revns)}'
+            xmap[xp] = _get_dict_list_value(xval, ele)
             last = xp
         elif xp[-1] not in ['*', ']']:
             last = xp.split(']/')[0] + ']'
-            xval = f'{xmap.get(last) or ""}/{get_qname(qname, revns)}'
-            xmap[xp] = get_dict_list_value(xval, ele)
+            xval = f'{xmap.get(last) or ""}/{_get_qualified_name(qname, revns)}'
+            xmap[xp] = _get_dict_list_value(xval, ele)
         elif f'{last}/*{p}' in xmap:
             last = f'{last}/*{p}'
 
@@ -110,7 +109,7 @@ def parse_mixed_ns(tree: etree._ElementTree,
                    max_items: int = MAX_ITEMS) -> OrderedDict[str, Tuple[str, int, List[str]]]:
     '''Parse XML document that may contain anonymous namespace.
     Returns a dict with original xpath as keys, xpath with qualified names and
-    count of elements found with the latter.
+    count of elements found with the latter or None if an error occurred.
         xmap = {
             "/some/xpath/*[1]": ("/some/xpath/ns:ele1", 1, ["id", "class"])
         }
@@ -133,18 +132,30 @@ def parse_mixed_ns(tree: etree._ElementTree,
     revns = {v:k or 'ns' for k,v in nsmap.items()}
     elements = tree.xpath(xpath_base, namespaces=nsmap)
 
-    xmap = OrderedDict.fromkeys(map(tree.getpath, elements[:max_items]))
+    xmap = None
+    try:
+        xmap = OrderedDict.fromkeys(map(tree.getpath, elements[:max_items]))
+    except TypeError as t:
+        if "_ElementUnicodeResult" in t.args[0]:
+            print(f"ERROR. Finding xpath expressions for text() nodes is not supported.\nxpath_base: {xpath_base}\nMessage: {t.args[0]}", file=sys. stderr)
+        else:
+            print(f"ERROR. Unexpected node type error. Please, file a bug.\n{t.args[0]}", file=sys. stderr)
+        return None
+    except Exception:
+        print("ERROR. Unexpected error. Please, file a bug.\n", file=sys. stderr)
+        import traceback
+        traceback.print_exc()
+        return None
 
     for idx, xp in enumerate(xmap.keys()):
         ele = elements[idx]
-
-        qname = etree.QName(ele.tag)
+        
         if '*' not in xp:
             # xpath expression is already qualified
             # e.g.: /soapenv:Envelope/soapenv:Body
             # or element does not have namespaces
             # e.g.: /root/child
-            xmap[xp]= get_dict_list_value(xp, ele)
+            xmap[xp]= _get_dict_list_value(xp, ele)
         else:
             # Element may contain qualified and unqualified parts
             # /soapenv:Envelope/soapenv:Body/*/*[2]
@@ -154,23 +165,30 @@ def parse_mixed_ns(tree: etree._ElementTree,
                 pqname = etree.QName(prnt.tag)
                 # parent's (unqualified) xpath
                 xpp = tree.getpath(prnt)
-                # parent of current element was already parsed so
-                # just append current qualified name
-                if xpp in xmap:
-                    if xmap[xpp] is None:
-                        xmap[xpp]= get_dict_list_value(f"//{get_qname(pqname, revns)}", ele)
-                    xmap[xp] = get_dict_list_value(f'{xmap[xpp][0]}/{get_qname(qname, revns)}', ele)
+                # type(ele): etree._Element
+                if type(ele.tag) is str:
+                    qname = etree.QName(ele.tag)
+                    # parent of current element was already parsed so
+                    # just append current qualified name
+                    if xpp in xmap:
+                        if xmap[xpp] is None:
+                            xmap[xpp]= _get_dict_list_value(f"//{_get_qualified_name(pqname, revns)}", ele)
+                        xmap[xp] = _get_dict_list_value(f'{xmap[xpp][0]}/{_get_qualified_name(qname, revns)}', ele)
+                    else:
+                        # element's parent exists but it's not present on xmap.
+                        # Adding it as preceding current element but not to xmap.
+                        prfx = '//'
+                        if prnt == tree.getroot():
+                            prfx = '/'
+                        xmap[xp] = _get_dict_list_value(f'{prfx}{_get_qualified_name(pqname, revns)}/{_get_qualified_name(qname, revns)}', ele)
                 else:
-                    # element's parent exists but it's not present on xmap.
-                    # Adding it as preceding current element but not to xmap.
-                    prfx = '//'
-                    if prnt == tree.getroot():
-                        prfx = '/'
-                    xmap[xp] = get_dict_list_value(f'{prfx}{get_qname(pqname, revns)}/{get_qname(qname, revns)}', ele)
+                    # Unqualified xpath support for Comments and processing instructions.
+                    # type(ele): etree._Comment or etree._ProcessingInstruction
+                    xmap[xp] = xp, 0, None
             else:
                 # Probably the first unqualified xpath. Has no parent and is not on xmap yet
                 #print(f"DEBUG: Parsing root: {xp}", file=sys. stderr)
-                build_path_from_parts(xmap, xp, qname, revns, ele)
+                _build_path_from_parts(xmap, xp, etree.QName(ele.tag), revns, ele)
             
         # count elements found with these xpath expressions
         if with_count:
@@ -179,6 +197,7 @@ def parse_mixed_ns(tree: etree._ElementTree,
             #print(f"DEBUG: {xp} {xmap[xp]}", file=sys. stderr)
             xcount = int(tree.xpath(f"count({xmap[xp][0]})", namespaces=nsmap))
             if xcount == 0:
+                # no creo en brujas pero que las hay, las hay. xD
                 print(f"ERROR: 0 elements found with {xp}. Possibly due to this bug: https://gitlab.gnome.org/GNOME/libxml2/-/issues/715", file=sys. stderr)
                 print(f"       element path without parent: {tree.getelementpath(ele)}", file=sys. stderr)
             xmap[xp] = xmap[xp][0], xcount, xmap[xp][2]
@@ -339,8 +358,11 @@ def main():
     if warns is not None:
         print(f"\n{warns}\n", file=sys.stderr)
     nsmap, xmap = parse(file,  xpath_base=xpath_base, with_count=with_count, max_items=max_items)[1:]
-    print(f"namespaces: {nsmap}\n", file=out_fd, flush=True)
-    print_xpaths(xmap, mode, out_fd=out_fd)
+    if xmap is not None:
+        print(f"namespaces: {nsmap}\n", file=out_fd, flush=True)
+        print_xpaths(xmap, mode, out_fd=out_fd)
+    else:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
