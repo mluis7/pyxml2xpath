@@ -22,14 +22,24 @@ Table of contents
 
 ## Description
 Iterates elements in a XML document and builds XPath expression for them starting at root element by default or at an element defined by an xpath expression.  
+Xpath expressions returned by `lxml` are converted to fully qualified ones taking into account namespaces if they exist.  
+
+Source expression could have qualified and unqualified parts with unknown element names  
+`/soapenv:Envelope/soapenv:Body/*/*[5]/*[2]`  
+
+A qualified one is returned  
+`/soapenv:Envelope/soapenv:Body/ns98:requestMessage/ns98:item/ns98:quantity`  
+
 Supported node types on path: elements, comments and processing instructions
 
 `//* | //processing-instruction() | //comment()`  
 
 text node types can be used in predicates but not on path
 
-Supported  : `//element[text() = "some text"]`  
-Unsupported: `//element/text()`
+|  Xpath                                | Supported |
+| :------------------------------------ |:---------:|
+| //element[text() = "some text"]       | Yes       |
+| //element/text()                      | No        |
 
 It can be used as a [command line utility](#command-line-usage) or as a [module](#module-usage).
 
