@@ -1,6 +1,6 @@
 
 # pyxml2xpath
-Parse XML document and build XPath expression corresponding to its structure.
+Parse an XML document with [lxml](https://lxml.de/) and build XPath expressions corresponding to its structure.
 
 <h3> &#x24D8; Project status: BETA (RC2) </h3>
 
@@ -21,28 +21,17 @@ Table of contents
 * [Testing](#testing)
 
 ## Description
-Iterate elements in XML document and build all existing XPath expression for them.
-Also, build qualified expressions from unqualified ones taking into account namespaces:
+Iterates elements in a XML document and builds XPath expression for them starting at root element by default or at an element defined by an xpath expression.  
+Supported node types on path: elements, comments and processing instructions
 
-`tree.getpath(element)  ->  /*/*[9]/*[6]  ->  /ns98:feed/ns98:entry/ns98:author`
+`//* | //processing-instruction() | //comment()`  
 
-```bash
-pyxml2xpath tests/resources/simple-no-ns.xml
-```
-```
-Running...
-file      : tests/resources/simple-no-ns.xml
-mode      : path
-xpath_base: '//*'
-namespaces: {}
+text node types can be used in predicates but not on path
 
-/root
-/root/child[1]
-/root/child[2]
-/root/another
+Supported  : `//element[text() = "some text"]`  
+Unsupported: `//element/text()`
 
-Found   4 xpath expressions for elements
-```
+It can be used as a [command line utility](#command-line-usage) or as a [module](#module-usage).
 
 A spin off of [xml2xpath Bash script](https://github.com/mluis7/xml2xpath). Both projects rely on [libxml2](https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home) implementation.
 
@@ -63,7 +52,7 @@ pip3.9 install git+https://github.com/mluis7/pyxml2xpath.git
 Soon on PyPi!
 
 ## Command line usage
-`pyxml2xpath <file path> [mode] [initial xpath expression]`
+`pyxml2xpath <file path> [mode] [initial xpath expression] [with count] [max elements] [without banners]`
 
 ```bash
 pyxml2xpath tests/resources/soap.xml
@@ -77,6 +66,7 @@ pyxml2xpath tests/resources/HL7.xml 'values' '//*[local-name()= "act"]'
 # count elements                  : False
 # Limit elements                  : 11
 # Do not show banner (just xpaths): true
+
 pyxml2xpath ~/tmp/test.html all none none 11 true
 ```
 
@@ -130,27 +120,6 @@ XPath search could start at a different element than root by passing an xpath ex
 xmap = parse(file,  xpath_base='//*[local-name() = "author"]')[2]
 ```
 
-or
-
-```
-pyxml2xpath tests/resources/HL7.xml '' '//*[local-name()= "act"]'
-Running...
-file: HL7.xml
-mode: path
-xpath_base: //*[local-name()= "act"]
-
-
-
-//ns98:entry
-//ns98:entry/ns98:act
-//ns98:entry
-//ns98:entry/ns98:act
-//ns98:entry
-//ns98:entry/ns98:act
-
-Found   6 xpath expressions for elements
-```
-
 ### Method parse(...)
 Signature: `parse(file: str, *, itree: etree._ElementTree = None, xpath_base: str = '//*', with_count: bool = WITH_COUNT, max_items: int = MAX_ITEMS)`
 
@@ -158,7 +127,8 @@ Parse given xml file or `lxml` tree, find xpath expressions in it and return:
 
 - The ElementTree for further usage
 - The sanitized namespaces map (no None keys)
-- A dictionary with unqualified xpath as keys and as values a tuple of qualified xpaths, count of elements found with them and a list with names of attributes of that elements:
+- A dictionary with unqualified xpath as keys and as values a tuple of qualified xpaths, count of elements found with them (optional) and a list with names of attributes of that elements.  
+  Returns `None` if an error occurred.
 
 ```python
 xmap = {
@@ -233,24 +203,6 @@ or on command line
 pyxml2xpath tests/resources/html5-small.html.xml 'all' '//*[@id="math"]'
 ```
 
-```
-Running...
-file: tests/resources/html5-small.html.xml
-mode: all
-xpath_base: //*[@id="math"]
-
-
-
-//ns98:p
-//ns98:p/ns99:math
-
-
-//ns98:p/ns99:math/@id
-
-Found   2 xpath expressions for elements
-Found   1 xpath expressions for attributes
-```
-
 ## Unqualified vs. Qualified
 Symbolic element tree of `tests/resources/wiki.xml` showing position of unqualified elements.
 
@@ -315,6 +267,7 @@ To use with 3rd command line argument or `xpath_base` named parameter.
 ```
 # Elements, comments and PIs
 //* | //processing-instruction() | //comment()
+/descendant-or-self::node()[not(.=self::text())]
 
 # A processing instruction with a comment preceding sibling
 //processing-instruction("pitest")[preceding-sibling::comment()]
