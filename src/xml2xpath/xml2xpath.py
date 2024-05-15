@@ -125,7 +125,7 @@ def parse_mixed_ns(tree: etree._ElementTree,
     xpath_base: str
         Xpath expression to start from
     with_count: bool
-        add count of found elements (performance cost on large documents.
+        add count of found elements (performance cost on large documents).
     max_items: int
         max number of elements to parse. Default: 100000'''
     
@@ -162,12 +162,12 @@ def parse_mixed_ns(tree: etree._ElementTree,
             # parent may exist even if xpath_base is a relative path: //soapenv:Body
             prnt = ele.getparent()
             if prnt is not None:
-                pqname = etree.QName(prnt.tag)
-                # parent's (unqualified) xpath
-                xpp = tree.getpath(prnt)
                 # type(ele): etree._Element
                 if type(ele.tag) is str:
                     qname = etree.QName(ele.tag)
+                    pqname = etree.QName(prnt.tag)
+                    # parent's (unqualified) xpath
+                    xpp = tree.getpath(prnt)
                     # parent of current element was already parsed so
                     # just append current qualified name
                     if xpp in xmap:
