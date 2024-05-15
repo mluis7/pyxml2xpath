@@ -2,13 +2,11 @@
 # pyxml2xpath
 Parse an XML document with [lxml](https://lxml.de/) and build XPath expressions corresponding to its structure.
 
-<h3> &#x24D8; Project status: BETA (RC2) </h3>
-
 Table of contents
 =================
 
 * [Basic usage](#description)
-* [Build and install](#build-and-install)
+* [Installation](#installation)
 * [Command line usage](#command-line-usage)
 * [Module usage](#module-usage)
 * [Method parse(...)](#method-parse)
@@ -43,9 +41,15 @@ text node types can be used in predicates but not on path
 
 It can be used as a [command line utility](#command-line-usage) or as a [module](#module-usage).
 
-A spin off of [xml2xpath Bash script](https://github.com/mluis7/xml2xpath). Both projects rely on [libxml2](https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home) implementation.
+> A spin off of [xml2xpath Bash script](https://github.com/mluis7/xml2xpath). Both projects rely on [libxml2](https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home) implementation.
 
-## Build and install
+## Installation
+Installing from PyPi
+
+`pip3.9 install pyxml2xpath`
+
+Or building from source repo
+
 ```bash
 git clone https://github.com/mluis7/pyxml2xpath.git
 cd pyxml2xpath
@@ -58,8 +62,6 @@ Alternative without cloning the repo yourself
 ```
 pip3.9 install git+https://github.com/mluis7/pyxml2xpath.git
 ```
-
-Soon on PyPi!
 
 ## Command line usage
 `pyxml2xpath <file path> [mode] [initial xpath expression] [with count] [max elements] [without banners]`
