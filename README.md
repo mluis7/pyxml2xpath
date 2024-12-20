@@ -243,7 +243,7 @@ x1 = next(xiter)
 # get base element attributes and build a predicate with first
 x1a = ''
 if len(xmap[x1][2]) > 0:
-    x1a = f"[@{xmap[x1][2][0]}='{needle}']"
+    x1a = f'[@{xmap[x1][2][0]}="{needle}"]'
 # base element relative xpath (/html/body/math -> //math)
 x1f = x1.replace(x0, '/')
 # remove numeric indexes if any (div[1] -> div)
