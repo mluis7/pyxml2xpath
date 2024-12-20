@@ -244,9 +244,9 @@ x1 = next(xiter)
 x1a = ''
 if len(xmap[x1][2]) > 0:
     x1a = f"[@{xmap[x1][2][0]}='{needle}']"
-# base element relative xpath
+# base element relative xpath (/html/body/math -> //math)
 x1f = x1.replace(x0, '/')
-# remove numeric indexes if any
+# remove numeric indexes if any (div[1] -> div)
 x1f = x1f.split('[', 1)[0]
 # add first attribute as predicate
 x1f += x1a
