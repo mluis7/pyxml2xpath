@@ -12,6 +12,7 @@ Table of contents
 * [Method parse(...)](#method-parse)
 * [Print result modes](#print-result-modes)
 * [HTML support](#html-support)
+* [Relative expressions](#relative-expressions)
 * [Unqualified vs. Qualified](#unqualified-vs-qualified)
 * [Initial Xpath Examples](#initial-xpath-examples)
 * [Performance](#performance)
@@ -213,6 +214,65 @@ or on command line
 
 ```
 pyxml2xpath tests/resources/html5-small.html.xml 'all' '//*[@id="math"]'
+```
+
+## Relative expressions
+Build relative expressions when passing `xpath_base` kword argument. The xpath of the parent should be removed so `base_xpath` should be like:
+
+`xpath_base = '//*[@id="math"]/parent::* | //*[@id="math"]/descendant-or-self::*'`
+
+Example:
+
+```python
+from lxml import html
+from xml2xpath import xml2xpath
+
+filepath = 'tests/resources/html5-small.html.xml'
+hdoc = html.parse(filepath)
+
+needle = 'math'
+xpath_base = f'//*[@id="{needle}"]/parent::* | //*[@id="{needle}"]/descendant-or-self::*'
+
+xmap = xml2xpath.parse(None, itree=hdoc, xpath_base=xpath_base)[2]
+
+xiter = iter(xmap)
+# parent xpath
+x0 = next(xiter)
+# base element xpath
+x1 = next(xiter)
+# get base element attributes and build a predicate with first
+x1a = ''
+if len(xmap[x1][2]) > 0:
+    x1a = f"[@{xmap[x1][2][0]}='{needle}']"
+# base element relative xpath (parent xpath removed)
+x1f = x1.replace(x0, '/')
+# remove numeric indexes if any
+x1f = x1f.split('[', 1)[0]
+# add first attribute as predicate
+x1f += x1a
+print(x1f)
+
+# children relative xpath
+for xs in list(xmap.keys())[2:]:
+    print(xs.replace(x1, x1f))
+```
+
+Output
+
+```None
+//math[@id='math']
+//math[@id='math']/mrow
+//math[@id='math']/mrow/mi
+//math[@id='math']/mrow/mo
+//math[@id='math']/mrow/mfrac
+//math[@id='math']/mrow/mfrac/mn
+//math[@id='math']/mrow/mfrac/msqrt
+//math[@id='math']/mrow/mfrac/msqrt/mrow
+//math[@id='math']/mrow/mfrac/msqrt/mrow/msup
+//math[@id='math']/mrow/mfrac/msqrt/mrow/msup/mi
+//math[@id='math']/mrow/mfrac/msqrt/mrow/msup/mn
+//math[@id='math']/mrow/mfrac/msqrt/mrow/mo
+//math[@id='math']/mrow/mfrac/msqrt/mrow/mn
 ```
 
 ## Unqualified vs. Qualified
