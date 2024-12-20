@@ -227,7 +227,7 @@ Example:
 from lxml import html
 from xml2xpath import xml2xpath
 
-filepath = '/home/lmc/projects/git/mluis7/pyxml2xpath/tests/resources/html5-small.html.xml'
+filepath = 'tests/resources/html5-small.html.xml'
 hdoc = html.parse(filepath)
 
 needle = 'math'
