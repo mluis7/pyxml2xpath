@@ -9,14 +9,14 @@ dynamic = ["version"]
 dependencies = [
   "lxml"
 ]
-requires-python = ">=3.9, <=11"
+requires-python = ">=3.9"
 authors = [
   {name = "Luis Muñoz", email = "south.minds@gmail.com"}
 ]
 
-description = "Find xpath expressions from XML document."
+description = "Generate xpath expressions from XML document."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = {text = "GPL-3.0"}
 keywords = ["xpath", "xml"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
