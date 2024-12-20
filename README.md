@@ -227,14 +227,14 @@ Example:
 from lxml import html
 from xml2xpath import xml2xpath
 
-filepath = 'tests/resources/html5-small.html.xml'
+filepath = '/home/lmc/projects/git/mluis7/pyxml2xpath/tests/resources/html5-small.html.xml'
 hdoc = html.parse(filepath)
 
 needle = 'math'
 xpath_base = f'//*[@id="{needle}"]/parent::* | //*[@id="{needle}"]/descendant-or-self::*'
-
 xmap = xml2xpath.parse(None, itree=hdoc, xpath_base=xpath_base)[2]
 
+rel_xpath = []
 xiter = iter(xmap)
 # parent xpath
 x0 = next(xiter)
@@ -244,17 +244,20 @@ x1 = next(xiter)
 x1a = ''
 if len(xmap[x1][2]) > 0:
     x1a = f"[@{xmap[x1][2][0]}='{needle}']"
-# base element relative xpath (parent xpath removed)
+# base element relative xpath
 x1f = x1.replace(x0, '/')
 # remove numeric indexes if any
 x1f = x1f.split('[', 1)[0]
 # add first attribute as predicate
 x1f += x1a
-print(x1f)
+rel_xpath.append(x1f)
 
 # children relative xpath
 for xs in list(xmap.keys())[2:]:
-    print(xs.replace(x1, x1f))
+    rel_xpath.append(xs.replace(x1, x1f))
+
+for x in rel_xpath:
+    print(x)
 ```
 
 Output
