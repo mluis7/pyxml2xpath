@@ -2,6 +2,8 @@
 # pyxml2xpath
 Parse an XML document with [lxml](https://lxml.de/) and build XPath expressions corresponding to its structure.
 
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?hosted_button_id=WBY3Y35L2P7UQ)
+
 Table of contents
 =================
 
