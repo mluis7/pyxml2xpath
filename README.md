@@ -47,21 +47,21 @@ It can be used as a [command line utility](#command-line-usage) or as a [module]
 ## Installation
 Installing from PyPi
 
-`pip3.9 install pyxml2xpath`
+`pip3.12 install pyxml2xpath`
 
 Or building from source repo
 
 ```bash
 git clone https://github.com/mluis7/pyxml2xpath.git
 cd pyxml2xpath
-python3.9 -m build
-python3.9 -m pip install dist/pyxml2xpath-0.2.0-py3-none-any.whl --upgrade
+python3.12 -m build
+python3.12 -m pip install dist/pyxml2xpath-0.2.0-py3-none-any.whl --upgrade
 ```
 
 Alternative without cloning the repo yourself
 
 ```
-pip3.9 install git+https://github.com/mluis7/pyxml2xpath.git
+pip3.12 install git+https://github.com/mluis7/pyxml2xpath.git
 ```
 
 ## Command line usage
@@ -173,12 +173,16 @@ If there are more than 1 default namespace, prefix will be incremental:
 ## Print result modes
 Print xpath expressions and validate by count of elements found with it.  
 
-`mode` argument values (optional):
+**mode** argument values (optional):
 
-- `path`  : print elements xpath expressions (default)  
-- `all`   : also print attribute xpath expressions  
-- `raw`   : print unqualified xpath and found values (tuple)  
-- `values`: print tuple of found values only  
+| Mode | Description |
+| ---- | ----------- |
+| `xpath` | print elements xpath expressions (default) |
+| `all` | also print attribute xpath expressions |
+| `raw` | print unqualified xpath and found values (tuple) |
+| `values` | print tuple of found values only |
+| `raw_json` | json string with internal xpath and namespace maps. |
+| `raw_json_pretty` | same as raw_json with pretty print |
 
 `pyxml2xpath ~/tmp/soap-ws-oasis.xml 'all'`
 

@@ -1,4 +1,4 @@
-'''Find all xpath expressions on XML document'''
+'''Generate xpath expressions from an XML document'''
 
 
 from collections import OrderedDict
@@ -7,6 +7,7 @@ from os import path, devnull, strerror
 from typing import Dict, List, Tuple
 import errno
 import sys
+import json
 
 from lxml import etree
 
@@ -15,17 +16,20 @@ XPATH_REALLY_ALL = f'{XPATH_ALL} | //processing-instruction() | //comment()'
 WITH_COUNT = False
 MAX_ITEMS = 100000
 OUT_FD = sys.stdout
-modes = ['xpath', 'all', 'raw', 'values']
+modes = ['xpath', 'all', 'raw', 'values', 'raw_json', 'raw_json_pretty']
 
 def usage():
     helpstr='''
     pyxml2xpath <file path> [mode] [initial xpath expression] [with element count: yes|true] [max elements: int] [no banner: yes|true]
     
     mode: str
-        path  : print elements xpath expressions (default)
+        xpath  : print elements xpath expressions (default)
         all   : also print attribute xpath expressions
         raw   : print unqualified xpath and found values (list)
         values: print list of found values only
+        raw_json: json string with internal xpath and namespace maps.
+                {"xpath": { ... }, "namespaces": { ... }}
+        raw_json_pretty: same as raw_json with pretty print
     
     Initial xpath expression: str
         Start at some element defined by an xpath expression.
@@ -206,33 +210,53 @@ def parse_mixed_ns(tree: etree._ElementTree,
 def print_xpaths(xmap: Dict,
                  mode: str ="path",
                  *,
-                 out_fd = OUT_FD):
-    '''Print xpath expressions and validate by count of elements found with it.
+                 out_fd = OUT_FD, nsmap= None):
+    '''
+    Print xpath expressions according to 'mode' argument.
+    
+    :param xmap: map of xpath expressions
+    :param mode: output mode
+    :param out_fd: output file descriptor
+    :param nsmap: namespaces map
+    
     mode: str
-        path  : print elements xpath expressions (default)
+        xpath  : print elements xpath expressions (default)
         all   : also print attribute xpath expressions
         raw   : print unqualified xpath and found values (list)
+        raw_json: json string with internal xpath and namespace maps.
+                {"xpath": { ... }.
+                 "namespaces": { ... }}
+        raw_json_pretty: same as raw_json with pretty print
         values: print tuple of found values only
     '''
     
     acount=0
     acountmsg=''
     
-    for unq_xpath, qual_xpath_lst in xmap.items():
-        if mode not in ['raw', 'values']:
-            print(qual_xpath_lst[0])
-    
-        if mode == "all":
-            #Print xpath for attributes
-            if qual_xpath_lst[2] is not []:
-                for a in qual_xpath_lst[2]:
-                    print(f"{qual_xpath_lst[0]}/@{a}")
-                    acount += 1
-                acountmsg = f"Found {acount:3} xpath expressions for attributes\n"
-        if mode == "raw":
-            print(unq_xpath, qual_xpath_lst)
-        elif mode == "values":
-            print(qual_xpath_lst)
+    if mode in ['raw_json', 'raw_json_pretty']:
+        indent = None
+        raw_json = {}
+        raw_json['xpath'] = xmap
+        if nsmap:
+            raw_json['namespaces'] = nsmap
+        if mode == 'raw_json_pretty':
+            indent = 4
+        print(json.dumps(raw_json, indent=indent))
+    else:
+        for unq_xpath, qual_xpath_lst in xmap.items():
+            if mode in ['xpath', 'all']:
+                print(qual_xpath_lst[0])
+                if mode == "all":
+                    #Print xpath for attributes
+                    if qual_xpath_lst[2] is not []:
+                        for a in qual_xpath_lst[2]:
+                            print(f"{qual_xpath_lst[0]}/@{a}")
+                            acount += 1
+                        acountmsg = f"Found {acount:3} xpath expressions for attributes\n"
+            elif mode == "raw":
+                print(unq_xpath, qual_xpath_lst)
+            elif mode == "values":
+                print(qual_xpath_lst)
             
     print(f"\nFound {len(xmap.keys()):3} xpath expressions for elements\n{acountmsg}", file=out_fd)
 
@@ -313,7 +337,7 @@ def main():
         sys.exit()
 
     file = sys.argv[1]
-    mode = "path"
+    mode = "xpath"
     xpath_base = XPATH_ALL
     with_count = WITH_COUNT
     max_items = MAX_ITEMS
@@ -360,7 +384,7 @@ def main():
     nsmap, xmap = parse(file,  xpath_base=xpath_base, with_count=with_count, max_items=max_items)[1:]
     if xmap is not None:
         print(f"namespaces: {nsmap}\n", file=out_fd, flush=True)
-        print_xpaths(xmap, mode, out_fd=out_fd)
+        print_xpaths(xmap, mode, out_fd=out_fd, nsmap=nsmap)
     else:
         sys.exit(1)
 
