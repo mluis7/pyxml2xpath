@@ -32,20 +32,22 @@ class TestPyXml2Xpath01:
         assert len(nsmap.keys()) == 3
     
     def test_fromstring(self):
-        filepath = 'resources/soap.xml'
-        with open(filepath,'rb') as fd:
+        '''
+        Read file as string instead of bytes.
+        '''
+        filepath = 'resources/iso-8859-1.xml'
+        with open(filepath,'r', encoding='iso-8859-1') as fd:
             xmlstr = fd.read()
-            print(f"\nTesting fromstring() from '{filepath}'")
+            print(f"\nTesting fromstring() from '{filepath}', type: {type(xmlstr)}")
             
-            nsmap, xmap = xml2xpath.fromstring(xmlstr, with_count=True)[1:]
+            nsmap, xmap = xml2xpath.fromstring(xmlstr, with_count=True, encoding='iso-8859-1')[1:]
             print(f"    --> Found {len(xmap.keys())} xpath expressions")
             print(f"    --> Found {len(nsmap.keys())} namespaces")
             print(f"    --> nsmap: {nsmap}")
             # do not count parent element
-            assert len(xmap.keys()) == 6
+            assert len(xmap.keys()) == 3
             # assert all found expressions exist at least once in the document.
             assert len([v for v in xmap.values() if v[1] == 0]) == 0
-            assert len(nsmap.keys()) == 3
 
     def test_fromstring_and_xpath_base(self):
         filepath = 'resources/soap.xml'

@@ -4,7 +4,7 @@
 from collections import OrderedDict
 from io import StringIO, BytesIO
 from os import path, devnull, strerror
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 import errno
 import sys
 import json
@@ -63,7 +63,7 @@ def _get_qualified_name(qname, revns):
 def get_encoding_from_fragment(xml_frag):
     '''
     Get encoding attribute value from xml declaration if present.
-    :param xml_frag: first 100 characters from string encoded in ASCII since the XML declaration should contain ASCII characters only.
+    :param xml_frag: first 100 characters from XML string.
     '''
     declstr = xml_frag.split(b'?>')[0]
     # Fake a minimal doc to parse declaration ensuring encoding is valid for lxml
@@ -126,24 +126,23 @@ def parse_mixed_ns(tree: etree._ElementTree,
     '''Parse XML document that may contain anonymous namespace.
     Returns a dict with original xpath as keys, xpath with qualified names and
     count of elements found with the latter or None if an error occurred.
-        xmap = {
+        xmap = ``{
             "/some/xpath/*[1]": ("/some/xpath/ns:ele1", 1, ["id", "class"])
-        }
+        }``
     To get the qualified xpath:
-        xmap['/some/xpath/*[1]'][0]
-        
-    Parameters
-    ----------
-    tree: lxml.etree._ElementTree
+        ``xmap['/some/xpath/*[1]'][0]``
+    
+    :param tree: lxml.etree._ElementTree
         ElementTree from current document
-    nsmap: dict
+    :param nsmap: dict
         namespaces dictionary from current document
-    xpath_base: str
+    :param xpath_base: str
         Xpath expression to start from
-    with_count: bool
+    :param with_count: bool
         add count of found elements (performance cost on large documents).
-    max_items: int
-        max number of elements to parse. Default: 100000'''
+    :param max_items: int
+        max number of elements to parse. Default: 100000
+    '''
     
     revns = {v:k or 'ns' for k,v in nsmap.items()}
     elements = tree.xpath(xpath_base, namespaces=nsmap)
@@ -219,8 +218,19 @@ def parse_mixed_ns(tree: etree._ElementTree,
             xmap[xp] = xmap[xp][0], xcount, xmap[xp][2]
     return xmap
 
+
+def get_json_response(xmap, nsmap, mode):
+    indent = None
+    raw_json = {}
+    raw_json['xpath'] = xmap
+    if nsmap:
+        raw_json['namespaces'] = nsmap
+    if mode == 'raw_json_pretty':
+        indent = 4
+    return json.dumps(raw_json, indent=indent)
+
 def print_xpaths(xmap: Dict,
-                 mode: str ="path",
+                 mode: str ="xpath",
                  *,
                  out_fd = OUT_FD, nsmap= None):
     '''
@@ -246,14 +256,7 @@ def print_xpaths(xmap: Dict,
     acountmsg=''
     
     if mode in ['raw_json', 'raw_json_pretty']:
-        indent = None
-        raw_json = {}
-        raw_json['xpath'] = xmap
-        if nsmap:
-            raw_json['namespaces'] = nsmap
-        if mode == 'raw_json_pretty':
-            indent = 4
-        print(json.dumps(raw_json, indent=indent))
+        print(get_json_response(xmap, nsmap, mode))
     else:
         for unq_xpath, qual_xpath_lst in xmap.items():
             if mode in ['xpath', 'all']:
@@ -295,20 +298,25 @@ def build_namespace_dict(tree: etree._ElementTree) ->  Dict[str, str]:
         nsmap[ns] = v
     return nsmap
 
-def fromstring(xmlstr: str, *,
+def fromstring(xmlstr: Union[str,bytes], *,
                xpath_base: str = '//*',
                with_count: bool = WITH_COUNT,
-               max_items: int = MAX_ITEMS) -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
+               max_items: int = MAX_ITEMS,
+               encoding='utf-8') -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
     '''
     Parse from string. If the document contains an encoding in XML declaration, use it.
-    If it starts with an XML declaration but has no 'encoding' attribute, 'UTF-8' will be used be default.
+    If it starts with an XML declaration but has no ``encoding`` attribute, ``utf-8`` will be used be default.
     
-    :param xmlstr: document or fragment as string.
+    :param xmlstr: document or fragment as string or bytes.
     :param xpath_base: xpath expression to start searching xpaths for.
     :param with_count: Include count of elements found with each expression. Default: False
     :param max_items: limit the number of parsed elements. Default: 100000
+    :param encoding: xml string encoding, ``utf-8`` by default. Use :func:`get_encoding_from_fragment` to get encoding.
     '''
-    doc = etree.parse(BytesIO(xmlstr))
+    xmlbytes = xmlstr
+    if isinstance(xmlstr, str):
+        xmlbytes = xmlstr.encode(encoding)
+    doc = etree.parse(BytesIO(xmlbytes))
     return parse(file=None, itree=doc, xpath_base=xpath_base, with_count=with_count, max_items=max_items)
     
 def parse(file: str, *,
