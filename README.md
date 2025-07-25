@@ -82,7 +82,13 @@ pyxml2xpath tests/resources/HL7.xml 'values' '//*[local-name()= "act"]'
 
 pyxml2xpath ~/tmp/test.html all none none 11 true
 ```
+Reading from stdin pass `-` as file
 
+```bash
+cat tests/resources/simple-ns.xml | pyxml2xpath - xpath none false 100 false
+
+pyxml2xpath - xpath none false 100 false < tests/resources/simple-ns.xml
+```
 
 ## Module usage
 
