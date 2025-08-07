@@ -220,6 +220,14 @@ def parse_mixed_ns(tree: etree._ElementTree,
 
 
 def get_json_response(xmap, nsmap, mode):
+    '''
+    Return a json string as
+        {"xpath": { ... }.
+        "namespaces": { ... }}
+    :param xmap:
+    :param nsmap:
+    :param mode:
+    '''
     indent = None
     raw_json = {}
     raw_json['xpath'] = xmap
@@ -361,6 +369,10 @@ def parse(file: str, *,
         raise(e)
 
 def main():
+    if len(sys.argv) == 1:
+        print(f"ERROR: No arguments passed.\nRun with -h for help.", file=sys.stderr)
+        sys.exit(1)
+    
     if sys.argv[1] in ["-h", "--help"]:
         usage()
         sys.exit()
@@ -374,7 +386,7 @@ def main():
     no_banners = False
     warns = None
     
-    if not path.isfile(file) and file != '-':
+    if file != '-' and not path.isfile(file):
         print(f"[Errno {errno.ENOENT}] {strerror(errno.ENOENT)}", file=sys.stderr)
         sys.exit(errno.ENOENT)
     

@@ -16,7 +16,7 @@ authors = [
 
 description = "Generate xpath expressions from XML document."
 readme = "README.md"
-license = {text = "GPL-3.0"}
+license = "GPL-3.0"
 keywords = ["xpath", "xml"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
