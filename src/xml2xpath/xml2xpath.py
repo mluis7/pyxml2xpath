@@ -1,12 +1,13 @@
-'''Find all xpath expressions on XML document'''
+'''Generate xpath expressions from an XML document'''
 
 
 from collections import OrderedDict
-from io import StringIO
+from io import StringIO, BytesIO
 from os import path, devnull, strerror
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 import errno
 import sys
+import json
 
 from lxml import etree
 
@@ -15,17 +16,22 @@ XPATH_REALLY_ALL = f'{XPATH_ALL} | //processing-instruction() | //comment()'
 WITH_COUNT = False
 MAX_ITEMS = 100000
 OUT_FD = sys.stdout
-modes = ['xpath', 'all', 'raw', 'values']
+modes = ['xpath', 'all', 'raw', 'values', 'raw_json', 'raw_json_pretty']
 
 def usage():
     helpstr='''
     pyxml2xpath <file path> [mode] [initial xpath expression] [with element count: yes|true] [max elements: int] [no banner: yes|true]
     
+    File path: pass '-' to read from stdin
+    
     mode: str
-        path  : print elements xpath expressions (default)
+        xpath  : print elements xpath expressions (default)
         all   : also print attribute xpath expressions
         raw   : print unqualified xpath and found values (list)
         values: print list of found values only
+        raw_json: json string with internal xpath and namespace maps.
+                {"xpath": { ... }, "namespaces": { ... }}
+        raw_json_pretty: same as raw_json with pretty print
     
     Initial xpath expression: str
         Start at some element defined by an xpath expression.
@@ -54,6 +60,16 @@ def _get_qualified_name(qname, revns):
         lname = f"{revns.get(qname.namespace)}:{qname.localname}"
     return lname
 
+def get_encoding_from_fragment(xml_frag):
+    '''
+    Get encoding attribute value from xml declaration if present.
+    :param xml_frag: first 100 characters from XML string.
+    '''
+    declstr = xml_frag.split(b'?>')[0]
+    # Fake a minimal doc to parse declaration ensuring encoding is valid for lxml
+    frdoc= etree.parse(BytesIO(declstr + b'?><root/>'))
+    return frdoc.docinfo.encoding
+    
 def _get_dict_list_value(value, element):
     '''Initialize tuple for xpath dictionary values.
     Items:
@@ -110,24 +126,23 @@ def parse_mixed_ns(tree: etree._ElementTree,
     '''Parse XML document that may contain anonymous namespace.
     Returns a dict with original xpath as keys, xpath with qualified names and
     count of elements found with the latter or None if an error occurred.
-        xmap = {
+        xmap = ``{
             "/some/xpath/*[1]": ("/some/xpath/ns:ele1", 1, ["id", "class"])
-        }
+        }``
     To get the qualified xpath:
-        xmap['/some/xpath/*[1]'][0]
-        
-    Parameters
-    ----------
-    tree: lxml.etree._ElementTree
+        ``xmap['/some/xpath/*[1]'][0]``
+    
+    :param tree: lxml.etree._ElementTree
         ElementTree from current document
-    nsmap: dict
+    :param nsmap: dict
         namespaces dictionary from current document
-    xpath_base: str
+    :param xpath_base: str
         Xpath expression to start from
-    with_count: bool
+    :param with_count: bool
         add count of found elements (performance cost on large documents).
-    max_items: int
-        max number of elements to parse. Default: 100000'''
+    :param max_items: int
+        max number of elements to parse. Default: 100000
+    '''
     
     revns = {v:k or 'ns' for k,v in nsmap.items()}
     elements = tree.xpath(xpath_base, namespaces=nsmap)
@@ -203,36 +218,68 @@ def parse_mixed_ns(tree: etree._ElementTree,
             xmap[xp] = xmap[xp][0], xcount, xmap[xp][2]
     return xmap
 
+
+def get_json_response(xmap, nsmap, mode):
+    '''
+    Return a json string as
+        {"xpath": { ... }.
+        "namespaces": { ... }}
+    :param xmap:
+    :param nsmap:
+    :param mode:
+    '''
+    indent = None
+    raw_json = {}
+    raw_json['xpath'] = xmap
+    if nsmap:
+        raw_json['namespaces'] = nsmap
+    if mode == 'raw_json_pretty':
+        indent = 4
+    return json.dumps(raw_json, indent=indent)
+
 def print_xpaths(xmap: Dict,
-                 mode: str ="path",
+                 mode: str ="xpath",
                  *,
-                 out_fd = OUT_FD):
-    '''Print xpath expressions and validate by count of elements found with it.
+                 out_fd = OUT_FD, nsmap= None):
+    '''
+    Print xpath expressions according to 'mode' argument.
+    
+    :param xmap: map of xpath expressions
+    :param mode: output mode
+    :param out_fd: output file descriptor
+    :param nsmap: namespaces map
+    
     mode: str
-        path  : print elements xpath expressions (default)
+        xpath  : print elements xpath expressions (default)
         all   : also print attribute xpath expressions
         raw   : print unqualified xpath and found values (list)
+        raw_json: json string with internal xpath and namespace maps.
+                {"xpath": { ... }.
+                 "namespaces": { ... }}
+        raw_json_pretty: same as raw_json with pretty print
         values: print tuple of found values only
     '''
     
     acount=0
     acountmsg=''
     
-    for unq_xpath, qual_xpath_lst in xmap.items():
-        if mode not in ['raw', 'values']:
-            print(qual_xpath_lst[0])
-    
-        if mode == "all":
-            #Print xpath for attributes
-            if qual_xpath_lst[2] is not []:
-                for a in qual_xpath_lst[2]:
-                    print(f"{qual_xpath_lst[0]}/@{a}")
-                    acount += 1
-                acountmsg = f"Found {acount:3} xpath expressions for attributes\n"
-        if mode == "raw":
-            print(unq_xpath, qual_xpath_lst)
-        elif mode == "values":
-            print(qual_xpath_lst)
+    if mode in ['raw_json', 'raw_json_pretty']:
+        print(get_json_response(xmap, nsmap, mode))
+    else:
+        for unq_xpath, qual_xpath_lst in xmap.items():
+            if mode in ['xpath', 'all']:
+                print(qual_xpath_lst[0])
+                if mode == "all":
+                    #Print xpath for attributes
+                    if qual_xpath_lst[2] is not []:
+                        for a in qual_xpath_lst[2]:
+                            print(f"{qual_xpath_lst[0]}/@{a}")
+                            acount += 1
+                        acountmsg = f"Found {acount:3} xpath expressions for attributes\n"
+            elif mode == "raw":
+                print(unq_xpath, qual_xpath_lst)
+            elif mode == "values":
+                print(qual_xpath_lst)
             
     print(f"\nFound {len(xmap.keys()):3} xpath expressions for elements\n{acountmsg}", file=out_fd)
 
@@ -259,11 +306,25 @@ def build_namespace_dict(tree: etree._ElementTree) ->  Dict[str, str]:
         nsmap[ns] = v
     return nsmap
 
-def fromstring(xmlstr: str, *,
+def fromstring(xmlstr: Union[str,bytes], *,
                xpath_base: str = '//*',
                with_count: bool = WITH_COUNT,
-               max_items: int = MAX_ITEMS) -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
-    doc = etree.parse(StringIO(xmlstr))
+               max_items: int = MAX_ITEMS,
+               encoding='utf-8') -> (etree._ElementTree, Dict[str, str], OrderedDict[str, Tuple[str, int, List[str]]]):
+    '''
+    Parse from string. If the document contains an encoding in XML declaration, use it.
+    If it starts with an XML declaration but has no ``encoding`` attribute, ``utf-8`` will be used be default.
+    
+    :param xmlstr: document or fragment as string or bytes.
+    :param xpath_base: xpath expression to start searching xpaths for.
+    :param with_count: Include count of elements found with each expression. Default: False
+    :param max_items: limit the number of parsed elements. Default: 100000
+    :param encoding: xml string encoding, ``utf-8`` by default. Use :func:`get_encoding_from_fragment` to get encoding.
+    '''
+    xmlbytes = xmlstr
+    if isinstance(xmlstr, str):
+        xmlbytes = xmlstr.encode(encoding)
+    doc = etree.parse(BytesIO(xmlbytes))
     return parse(file=None, itree=doc, xpath_base=xpath_base, with_count=with_count, max_items=max_items)
     
 def parse(file: str, *,
@@ -283,12 +344,12 @@ def parse(file: str, *,
     
     Parameters
     ----------
-        file: file path string
-        itree: lxml.etree._ElementTree
+        :param file: file path string
+        :param itree: lxml.etree._ElementTree
                 ElementTree object
-        xpath_base: xpath expression to start searching xpaths for.
-        with_count: Include count of elements found with each expression. Default: False
-        max_items: limit the number of parsed elements. Default: 100000
+        :param xpath_base: xpath expression to start searching xpaths for.
+        :param with_count: Include count of elements found with each expression. Default: False
+        :param max_items: limit the number of parsed elements. Default: 100000
     '''
     
     try:
@@ -296,7 +357,7 @@ def parse(file: str, *,
         if tree is None:
             if not path.isfile(file):
                 raise FileNotFoundError(errno.ENOENT, strerror(errno.ENOENT), file)
-            with open(file, "r") as fin:
+            with open(file, "rb") as fin:
                 tree = etree.parse(fin)
         
         nsmap = build_namespace_dict(tree)
@@ -308,12 +369,16 @@ def parse(file: str, *,
         raise(e)
 
 def main():
+    if len(sys.argv) == 1:
+        print(f"ERROR: No arguments passed.\nRun with -h for help.", file=sys.stderr)
+        sys.exit(1)
+    
     if sys.argv[1] in ["-h", "--help"]:
         usage()
         sys.exit()
 
     file = sys.argv[1]
-    mode = "path"
+    mode = "xpath"
     xpath_base = XPATH_ALL
     with_count = WITH_COUNT
     max_items = MAX_ITEMS
@@ -321,7 +386,7 @@ def main():
     no_banners = False
     warns = None
     
-    if not path.isfile(file):
+    if file != '-' and not path.isfile(file):
         print(f"[Errno {errno.ENOENT}] {strerror(errno.ENOENT)}", file=sys.stderr)
         sys.exit(errno.ENOENT)
     
@@ -357,10 +422,14 @@ def main():
     print(f"{'no_banners':10}: {no_banners}", file=out_fd, flush=True)
     if warns is not None:
         print(f"\n{warns}\n", file=sys.stderr)
-    nsmap, xmap = parse(file,  xpath_base=xpath_base, with_count=with_count, max_items=max_items)[1:]
+    if file != '-':
+        nsmap, xmap = parse(file,  xpath_base=xpath_base, with_count=with_count, max_items=max_items)[1:]
+    else:
+        xmlstr = sys.stdin.buffer.read()
+        nsmap, xmap = fromstring(xmlstr,  xpath_base=xpath_base, with_count=with_count, max_items=max_items)[1:]
     if xmap is not None:
         print(f"namespaces: {nsmap}\n", file=out_fd, flush=True)
-        print_xpaths(xmap, mode, out_fd=out_fd)
+        print_xpaths(xmap, mode, out_fd=out_fd, nsmap=nsmap)
     else:
         sys.exit(1)
 
